@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  background: #EEF2F0;
+  color: #12232B;
+}
+
+.field-label {
+  @apply block text-xs font-medium text-muted mb-1;
+}
+.field-input {
+  @apply w-full rounded-md border border-line bg-white px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-offset-0;
+}
+.panel {
+  @apply bg-white border border-line rounded-xl overflow-hidden;
+}
+.panel-head {
+  @apply bg-panel px-4 py-3 border-b border-line flex items-center justify-between;
+}
+.panel-head h2 {
+  @apply text-xs font-semibold uppercase tracking-wide text-muted;
+}
+.panel-body {
+  @apply p-4 flex flex-col gap-3;
+}
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold cursor-pointer transition;
+}
+.btn-primary {
+  @apply btn bg-deep text-white hover:bg-[#0e415a];
+}
+.btn-outline {
+  @apply btn border border-line bg-white text-deep hover:bg-panel;
+}
+.badge {
+  @apply inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+  @page {
+    margin: 12mm;
+  }
+}

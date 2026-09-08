@@ -1,5 +1,5 @@
 import { createSelector, createSlice, PayloadAction, ThunkAction, AnyAction } from "@reduxjs/toolkit";
-import { JobRecord, JobStatus, LineItem, Payment, ServiceKey } from "./types";
+import { Expense, JobRecord, JobStatus, LineItem, Payment, ServiceKey } from "./types";
 import { SERVICES } from "./services";
 import { computeTotals, localDateInput, newId } from "./money";
 import { counterKey, dateStamp } from "./numbering";
@@ -41,6 +41,7 @@ export function makeBlankRecord(service: ServiceKey): JobRecord {
     invoiceDate: today,
     invoiceCreated: false,
     payments: [],
+    expenses: [],
     warranty: svc.defaultWarranty,
     paymentTerms: svc.defaultPaymentTerms,
     terms: svc.defaultTerms.join("\n"),
@@ -83,6 +84,30 @@ const recordsSlice = createSlice({
       rec.payments = rec.payments.filter((p) => p.id !== action.payload.paymentId);
       rec.updatedAt = new Date().toISOString();
     },
+    addExpense(state, action: PayloadAction<{ id: string; expense: Expense }>) {
+      const rec = state.byId[action.payload.id];
+      if (!rec) return;
+      const amount = Number(action.payload.expense.amount);
+      if (!Number.isFinite(amount) || amount <= 0) return;
+      rec.expenses.push({ ...action.payload.expense, amount });
+      rec.updatedAt = new Date().toISOString();
+    },
+    updateExpense(state, action: PayloadAction<{ id: string; expense: Expense }>) {
+      const rec = state.byId[action.payload.id];
+      if (!rec) return;
+      const amount = Number(action.payload.expense.amount);
+      if (!Number.isFinite(amount) || amount <= 0 || !action.payload.expense.description.trim()) return;
+      const index = rec.expenses.findIndex((expense) => expense.id === action.payload.expense.id);
+      if (index < 0) return;
+      rec.expenses[index] = { ...action.payload.expense, amount, description: action.payload.expense.description.trim() };
+      rec.updatedAt = new Date().toISOString();
+    },
+    removeExpense(state, action: PayloadAction<{ id: string; expenseId: string }>) {
+      const rec = state.byId[action.payload.id];
+      if (!rec) return;
+      rec.expenses = rec.expenses.filter((expense) => expense.id !== action.payload.expenseId);
+      rec.updatedAt = new Date().toISOString();
+    },
     setStatus(state, action: PayloadAction<{ id: string; status: JobStatus }>) {
       const rec = state.byId[action.payload.id];
       if (!rec) return;
@@ -109,6 +134,9 @@ export const {
   setItems,
   addPayment,
   removePayment,
+  addExpense,
+  updateExpense,
+  removeExpense,
   setStatus,
   deleteRecord,
   hydrate,

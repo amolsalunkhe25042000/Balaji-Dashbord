@@ -12,6 +12,11 @@ import ManagementDashboard from "@/components/ManagementDashboard";
 
 export default function DashboardPage() {
   const records = useAppSelector(selectAllRecords);
+  const dashboardWidgets = useAppSelector((state) => state.settings.dashboardWidgets);
+  const managementPanels = useAppSelector((state) => state.settings.managementPanels);
+  const operationsColumns = useAppSelector((state) => state.settings.operationsColumns);
+  const visibleStatuses = useAppSelector((state) => state.settings.visibleStatuses);
+  const brandingName = useAppSelector((state) => state.settings.brandingName);
   const [activeStatus, setActiveStatus] = useState<"all" | JobStatus>("all");
   const [activeService, setActiveService] = useState<"all" | ServiceKey>("all");
 
@@ -44,7 +49,7 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-display font-bold text-deep">Dashboard</h1>
+          <h1 className="text-xl font-display font-bold text-deep">{brandingName} Dashboard</h1>
           <p className="text-sm text-muted">Overview of every enquiry, quotation and invoice.</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -61,24 +66,27 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
-        <StatCard label="Total jobs" value={String(totalJobs)} />
-        <StatCard label="Customer visits" value={String(customerVisits)} tone="warn" sub={`${enquiries.length} waiting · ${closedRequests} rejected`} />
-        <StatCard label="Pending approval" value={String(pendingApproval)} tone="warn" sub="Enquiry or quotation sent" />
-        <StatCard label="Pending payment" value={String(pending)} tone="warn" />
-        <StatCard label="Complete work" value={String(completeWork)} tone="good" sub={`${paid} paid · ${closed} closed`} />
-        <StatCard label="Closed requests" value={String(closedRequests)} tone="bad" sub="Did not start work" />
-        <StatCard label="Total collected" value={`₹ ${fmtMoney(totalCollected)}`} tone="good" />
-        <StatCard label="Total pending amount" value={`₹ ${fmtMoney(totalPendingAmount)}`} tone="bad" />
+        {dashboardWidgets.includes("totalJobs") && <StatCard label="Total jobs" value={String(totalJobs)} />}
+        {dashboardWidgets.includes("customerVisits") && <StatCard label="Customer visits" value={String(customerVisits)} tone="warn" sub={`${enquiries.length} waiting · ${closedRequests} rejected`} />}
+        {dashboardWidgets.includes("pendingApproval") && <StatCard label="Pending approval" value={String(pendingApproval)} tone="warn" sub="Enquiry or quotation sent" />}
+        {dashboardWidgets.includes("pendingPayment") && <StatCard label="Pending payment" value={String(pending)} tone="warn" />}
+        {dashboardWidgets.includes("completeWork") && <StatCard label="Complete work" value={String(completeWork)} tone="good" sub={`${paid} paid · ${closed} closed`} />}
+        {dashboardWidgets.includes("closedRequests") && <StatCard label="Closed requests" value={String(closedRequests)} tone="bad" sub="Did not start work" />}
+        {dashboardWidgets.includes("totalCollected") && <StatCard label="Total collected" value={`₹ ${fmtMoney(totalCollected)}`} tone="good" />}
+        {dashboardWidgets.includes("totalPendingAmount") && <StatCard label="Total pending amount" value={`₹ ${fmtMoney(totalPendingAmount)}`} tone="bad" />}
       </div>
 
-      <ManagementDashboard
+      {dashboardWidgets.includes("managementDashboard") && <ManagementDashboard
         records={records}
         activeStatus={activeStatus}
         activeService={activeService}
         onStatusSelect={setActiveStatus}
         onServiceSelect={setActiveService}
-      />
-      <RecentWork records={visibleRecords} />
+        managementPanels={managementPanels}
+        operationsColumns={operationsColumns}
+        visibleStatuses={visibleStatuses}
+      />}
+      {dashboardWidgets.includes("recentWork") && <RecentWork records={visibleRecords} />}
     </div>
   );
 }

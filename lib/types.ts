@@ -33,6 +33,17 @@ export interface Payment {
   note?: string;
 }
 
+export type ExpenseCategory = "labor" | "material" | "transport" | "other";
+
+export interface Expense {
+  id: string;
+  category: ExpenseCategory;
+  description: string;
+  amount: number;
+  date: string;
+  note?: string;
+}
+
 export interface CompanyInfo {
   name: string;
   tagline: string;
@@ -67,6 +78,7 @@ export interface JobRecord {
   invoiceCreated: boolean;
 
   payments: Payment[];
+  expenses: Expense[];
 
   warranty: string;
   paymentTerms: string;

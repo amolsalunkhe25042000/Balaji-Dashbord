@@ -3,6 +3,7 @@
 import { JobRecord, JobStatus, ServiceKey } from "@/lib/types";
 import { SERVICES } from "@/lib/services";
 import { computeTotals, fmtMoney, isInvoiceRecord } from "@/lib/money";
+import { ManagementPanel, OperationsColumn } from "@/lib/settingsSlice";
 import {
   Bar,
   BarChart,
@@ -50,14 +51,20 @@ export default function ManagementDashboard({
   activeService,
   onStatusSelect,
   onServiceSelect,
+  managementPanels,
+  operationsColumns,
+  visibleStatuses,
 }: {
   records: JobRecord[];
   activeStatus: FilterStatus;
   activeService: FilterService;
   onStatusSelect: (status: FilterStatus) => void;
   onServiceSelect: (service: FilterService) => void;
+  managementPanels: ManagementPanel[];
+  operationsColumns: OperationsColumn[];
+  visibleStatuses: JobStatus[];
 }) {
-  const statusSlices = STATUS_SLICES.map((slice) => ({
+  const statusSlices = STATUS_SLICES.filter((slice) => visibleStatuses.includes(slice.status as JobStatus)).map((slice) => ({
     ...slice,
     value: records.filter((record) => record.status === slice.status).length,
   }));
@@ -127,7 +134,7 @@ export default function ManagementDashboard({
       </div>
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
-        <div className="panel p-4">
+        {managementPanels.includes("requestStatus") && <div className="panel p-4">
           <div className="mb-4 flex items-start justify-between gap-2">
             <div>
               <h3 className="font-display font-bold text-deep">Request status</h3>
@@ -156,9 +163,9 @@ export default function ManagementDashboard({
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </div>}
 
-        <div className="panel p-4">
+        {managementPanels.includes("serviceMix") && <div className="panel p-4">
           <div className="mb-4">
             <h3 className="font-display font-bold text-deep">Service mix</h3>
             <p className="text-xs text-muted">Click a division to focus the register</p>
@@ -185,9 +192,9 @@ export default function ManagementDashboard({
               </PieChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </div>}
 
-        <div className="panel p-4">
+        {managementPanels.includes("cashPosition") && <div className="panel p-4">
           <div className="mb-4">
             <h3 className="font-display font-bold text-deep">Cash position</h3>
             <p className="text-xs text-muted">Collected versus outstanding invoices</p>
@@ -205,11 +212,11 @@ export default function ManagementDashboard({
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </div>}
       </div>
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-        <div className="panel p-4">
+        {managementPanels.includes("operationsMatrix") && <div className="panel p-4">
           <div className="mb-3">
             <h3 className="font-display font-bold text-deep">Operations matrix</h3>
             <p className="text-xs text-muted">A compact view of every request stage</p>
@@ -219,9 +226,9 @@ export default function ManagementDashboard({
               <thead>
                 <tr className="border-b border-line text-left uppercase tracking-wide text-muted">
                   <th className="px-2 py-2">Stage</th>
-                  <th className="px-2 py-2 text-right">Requests</th>
-                  <th className="px-2 py-2 text-right">Share</th>
-                  <th className="px-2 py-2 text-right">Value</th>
+                  {operationsColumns.includes("requests") && <th className="px-2 py-2 text-right">Requests</th>}
+                  {operationsColumns.includes("share") && <th className="px-2 py-2 text-right">Share</th>}
+                  {operationsColumns.includes("value") && <th className="px-2 py-2 text-right">Value</th>}
                 </tr>
               </thead>
               <tbody>
@@ -235,18 +242,18 @@ export default function ManagementDashboard({
                       onClick={() => slice.status && onStatusSelect(slice.status)}
                     >
                       <td className="px-2 py-2 font-semibold"><span className="mr-2 inline-block h-2 w-2 rounded-full" style={{ backgroundColor: slice.color }} />{slice.label}</td>
-                      <td className="px-2 py-2 text-right font-semibold">{count}</td>
-                      <td className="px-2 py-2 text-right text-muted">{records.length ? Math.round((count / records.length) * 100) : 0}%</td>
-                      <td className="px-2 py-2 text-right font-mono">₹{fmtMoney(value)}</td>
+                      {operationsColumns.includes("requests") && <td className="px-2 py-2 text-right font-semibold">{count}</td>}
+                      {operationsColumns.includes("share") && <td className="px-2 py-2 text-right text-muted">{records.length ? Math.round((count / records.length) * 100) : 0}%</td>}
+                      {operationsColumns.includes("value") && <td className="px-2 py-2 text-right font-mono">₹{fmtMoney(value)}</td>}
                     </tr>
                   );
                 })}
               </tbody>
             </table>
           </div>
-        </div>
+        </div>}
 
-        <div className="panel p-4">
+        {managementPanels.includes("serviceValueMap") && <div className="panel p-4">
           <div className="mb-3">
             <h3 className="font-display font-bold text-deep">Service value map</h3>
             <p className="text-xs text-muted">Larger blocks represent higher quoted value</p>
@@ -258,7 +265,7 @@ export default function ManagementDashboard({
               </Treemap>
             </ResponsiveContainer>
           </div>
-        </div>
+        </div>}
       </div>
 
       <div className="flex flex-wrap items-center gap-2 rounded-lg border border-line bg-white px-3 py-2 text-xs">

@@ -1,7 +1,9 @@
 import { configureStore } from "@reduxjs/toolkit";
 import recordsReducer, { RecordsState } from "./recordsSlice";
+import settingsReducer, { ALL_JOB_STATUSES, DEFAULT_SETTINGS, MANAGEMENT_PANELS, OPERATIONS_COLUMNS, SettingsState } from "./settingsSlice";
 
 export const STORAGE_KEY = "balaji_crm_state_v1";
+export const SETTINGS_STORAGE_KEY = "balaji_crm_settings_v1";
 
 export function loadStoredRecords() {
   if (typeof window === "undefined") return undefined;
@@ -20,15 +22,61 @@ export function loadStoredRecords() {
     ) {
       return undefined;
     }
-    return parsed as RecordsState;
+    const records = parsed as RecordsState;
+    Object.values(records.byId).forEach((record) => {
+      if (!Array.isArray(record.expenses)) record.expenses = [];
+    });
+    return records;
   } catch {
     return undefined;
   }
 }
 
+export function loadStoredSettings(): SettingsState | undefined {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (!raw) return undefined;
+    const parsed = JSON.parse(raw) as Partial<SettingsState>;
+    if (!parsed || typeof parsed.brandingName !== "string" || !Array.isArray(parsed.dashboardWidgets)) {
+      return undefined;
+    }
+    const dashboardWidgets = parsed.dashboardWidgets.filter((widget) =>
+      DEFAULT_SETTINGS.dashboardWidgets.includes(widget as (typeof DEFAULT_SETTINGS.dashboardWidgets)[number])
+    ) as SettingsState["dashboardWidgets"];
+    const managementPanels = Array.isArray(parsed.managementPanels)
+      ? parsed.managementPanels.filter((panel) => MANAGEMENT_PANELS.includes(panel as (typeof MANAGEMENT_PANELS)[number])) as SettingsState["managementPanels"]
+      : [...DEFAULT_SETTINGS.managementPanels];
+    const operationsColumns = Array.isArray(parsed.operationsColumns)
+      ? parsed.operationsColumns.filter((column) => OPERATIONS_COLUMNS.includes(column as (typeof OPERATIONS_COLUMNS)[number])) as SettingsState["operationsColumns"]
+      : [...DEFAULT_SETTINGS.operationsColumns];
+    const visibleStatuses = Array.isArray(parsed.visibleStatuses)
+      ? parsed.visibleStatuses.filter((status) => ALL_JOB_STATUSES.includes(status as (typeof ALL_JOB_STATUSES)[number])) as SettingsState["visibleStatuses"]
+      : [...DEFAULT_SETTINGS.visibleStatuses];
+    return {
+      brandingName: parsed.brandingName.trim() || DEFAULT_SETTINGS.brandingName,
+      dashboardWidgets: dashboardWidgets.length ? dashboardWidgets : [...DEFAULT_SETTINGS.dashboardWidgets],
+      managementPanels: managementPanels.length ? managementPanels : [...DEFAULT_SETTINGS.managementPanels],
+      operationsColumns: operationsColumns.length ? operationsColumns : [...DEFAULT_SETTINGS.operationsColumns],
+      visibleStatuses: visibleStatuses.length ? visibleStatuses : [...DEFAULT_SETTINGS.visibleStatuses],
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+export function saveStoredSettings(settings: SettingsState) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  } catch {
+    /* ignore quota / private-browsing errors */
+  }
+}
+
 export function makeStore() {
   const store = configureStore({
-    reducer: { records: recordsReducer },
+    reducer: { records: recordsReducer, settings: settingsReducer },
   });
 
   if (typeof window !== "undefined") {
@@ -39,6 +87,7 @@ export function makeStore() {
       saveTimer = setTimeout(() => {
         try {
           window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store.getState().records));
+          saveStoredSettings(store.getState().settings);
         } catch {
           /* ignore quota / private-browsing errors */
         }

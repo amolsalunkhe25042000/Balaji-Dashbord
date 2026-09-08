@@ -3,6 +3,7 @@ export type ServiceKey = "painting" | "waterproofing";
 export type JobStatus =
   | "enquiry" // draft, nothing printed yet
   | "quotation_sent" // quotation printed, no invoice yet
+  | "approved" // customer approved the quotation, ready to start work
   | "invoiced" // invoice created, ₹0 paid
   | "partially_paid" // some payment received
   | "paid" // fully paid

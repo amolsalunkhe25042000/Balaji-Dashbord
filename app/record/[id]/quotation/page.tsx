@@ -29,6 +29,7 @@ export default function QuotationPage({ params }: { params: { id: string } }) {
   };
 
   const reprint = () => {
+    if (record.status === "request_closed") return;
     // still print-anytime; only bump the number if this quotation was never actually printed
     if (!record.quotationPrinted) {
       const quotationNo = dispatch(commitNextNumber(record.service, "quotation"));
@@ -38,12 +39,18 @@ export default function QuotationPage({ params }: { params: { id: string } }) {
   };
 
   const toggleRequestClosed = () => {
+    if (record.status !== "enquiry" && record.status !== "quotation_sent" && record.status !== "request_closed") return;
     dispatch(
       setStatus({
         id: record.id,
-        status: record.status === "request_closed" ? "quotation_sent" : "request_closed",
+        status: record.status === "request_closed" ? (record.quotationPrinted ? "quotation_sent" : "enquiry") : "request_closed",
       })
     );
+  };
+
+  const approveQuotation = () => {
+    if (!record.quotationPrinted || record.status !== "quotation_sent") return;
+    dispatch(setStatus({ id: record.id, status: "approved" }));
   };
 
   return (
@@ -60,13 +67,20 @@ export default function QuotationPage({ params }: { params: { id: string } }) {
           <Link href="/" className="btn-outline">
             ← Dashboard
           </Link>
-          <button className="btn-outline" onClick={reprint}>
+          <button className="btn-outline" onClick={reprint} disabled={record.status === "request_closed"}>
             Print quotation
           </button>
-          <button className="btn-outline text-red-700" onClick={toggleRequestClosed}>
-            {record.status === "request_closed" ? "Reopen request" : "Close request"}
-          </button>
-          {record.status !== "request_closed" && (
+          {(record.status === "enquiry" || record.status === "quotation_sent" || record.status === "request_closed") && (
+            <button className="btn-outline text-red-700" onClick={toggleRequestClosed}>
+              {record.status === "request_closed" ? "Reopen request" : "Mark customer rejected"}
+            </button>
+          )}
+          {record.status === "quotation_sent" && (
+            <button className="btn-primary" onClick={approveQuotation}>
+              Customer approved
+            </button>
+          )}
+          {(record.status === "approved" || record.status === "invoiced" || record.status === "partially_paid" || record.status === "paid" || record.status === "closed") && record.quotationPrinted && (
             <button className="btn-primary" onClick={goToInvoice}>
               {record.invoiceCreated ? "Go to invoice →" : "Create invoice →"}
             </button>

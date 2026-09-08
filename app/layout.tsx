@@ -4,7 +4,7 @@ import Providers from "./providers";
 import TopNav from "@/components/TopNav";
 
 export const metadata: Metadata = {
-  title: "Balaji Painting Service — Job Manager",
+  title: "Balaji CRM — Job Manager",
   description: "Enquiries, quotations, invoices and payment tracking for Balaji Painting & Waterproofing",
 };
 

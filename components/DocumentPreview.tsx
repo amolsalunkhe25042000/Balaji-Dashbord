@@ -1,6 +1,6 @@
 import { JobRecord } from "@/lib/types";
 import { SERVICES } from "@/lib/services";
-import { computeTotals, fmtMoney, formatDate, numberToWordsIndian } from "@/lib/money";
+import { computeTotals, fmtMoney, formatDate, lineItemTotal, numberToWordsIndian } from "@/lib/money";
 
 function Wave({ color, height = 10 }: { color: string; height?: number }) {
   return (
@@ -90,7 +90,7 @@ export default function DocumentPreview({
         <div className="flex items-center gap-4 pb-5">
           <ServiceMark variant={svc.logo as "drop" | "roller"} accent={svc.accentHex} size={46} />
           <div>
-            <h2 className="text-xl sm:text-2xl font-display font-bold">{record.company.name}</h2>
+            <h2 className="max-w-full break-words text-xl sm:text-2xl font-display font-bold">{record.company.name}</h2>
             <div className="text-xs text-[#9FD3D2]">{record.company.tagline}</div>
           </div>
         </div>
@@ -100,9 +100,9 @@ export default function DocumentPreview({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 px-6 sm:px-8 py-5 bg-white border-b border-line text-sm">
         <div>
           <p className="text-xs text-muted mb-0.5">Company address</p>
-          <div className="text-[13px]">{record.company.address}</div>
+          <div className="break-words text-[13px]">{record.company.address}</div>
           <p className="text-xs text-muted mt-2 mb-0.5">Contact</p>
-          <div className="text-[13px]">
+          <div className="break-words text-[13px]">
             {record.company.phone1}
             {record.company.phone2 ? ` / ${record.company.phone2}` : ""} · {record.company.website}
           </div>
@@ -128,7 +128,7 @@ export default function DocumentPreview({
           </div>
           <div className="col-span-2">
             <p className="text-xs text-muted mb-0.5">Site address</p>
-            <div className="text-[13px]">
+            <div className="break-words text-[13px]">
               {record.customer.address || <span className="italic text-gray-400">Site / billing address</span>}
               {record.customer.site ? ` — ${record.customer.site}` : ""}
             </div>
@@ -169,7 +169,7 @@ export default function DocumentPreview({
           </thead>
           <tbody>
             {record.items.map((it, idx) => {
-              const amount = (Number(it.qty) || 0) * (Number(it.rate) || 0);
+              const amount = lineItemTotal(it);
               return (
                 <tr key={it.id} className={idx % 2 === 1 ? "bg-[#FBFCFB]" : ""}>
                   <td className="px-2.5 py-2 border-b border-line align-top">{idx + 1}</td>

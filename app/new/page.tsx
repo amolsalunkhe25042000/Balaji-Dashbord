@@ -42,6 +42,7 @@ export default function NewJobPage() {
       status: "quotation_sent",
     };
     dispatch(upsertRecord(finalRecord));
+    setDraft(finalRecord);
     setView("preview");
     setTimeout(() => {
       window.print();
@@ -71,7 +72,7 @@ export default function NewJobPage() {
           <h1 className="text-xl font-display font-bold text-deep">New job</h1>
             <p className="text-sm text-muted">Save a customer enquiry first, or continue to the quotation stage when the customer accepts.</p>
         </div>
-        <div className="bg-[#08222E] rounded-lg p-1">
+        <div className="bg-deep rounded-lg p-1">
           <ServicePicker value={service} onChange={switchService} />
         </div>
       </div>
@@ -121,7 +122,7 @@ export default function NewJobPage() {
                   onChange={(e) => patch({ customer: { ...draft.customer, address: e.target.value } })}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
                 <div>
                   <label className="field-label">Contact number</label>
                   <input
@@ -149,7 +150,7 @@ export default function NewJobPage() {
               <h2>Quotation details</h2>
             </div>
             <div className="panel-body">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
                 <div>
                   <label className="field-label">Date</label>
                   <input
@@ -163,6 +164,8 @@ export default function NewJobPage() {
                   <label className="field-label">Valid for (days)</label>
                   <input
                     type="number"
+                    min="0"
+                    max="100"
                     className="field-input"
                     value={draft.validityDays}
                     onChange={(e) => patch({ validityDays: Number(e.target.value) })}
@@ -196,7 +199,7 @@ export default function NewJobPage() {
               <h2>Charges</h2>
             </div>
             <div className="panel-body">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
                 <div>
                   <label className="field-label">Discount (%)</label>
                   <input

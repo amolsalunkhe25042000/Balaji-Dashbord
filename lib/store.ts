@@ -1,15 +1,26 @@
 import { configureStore } from "@reduxjs/toolkit";
-import recordsReducer from "./recordsSlice";
+import recordsReducer, { RecordsState } from "./recordsSlice";
 
-const STORAGE_KEY = "balaji_crm_state_v1";
+export const STORAGE_KEY = "balaji_crm_state_v1";
 
-function loadPreloadedState() {
+export function loadStoredRecords() {
   if (typeof window === "undefined") return undefined;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return undefined;
-    const parsed = JSON.parse(raw);
-    return { records: parsed };
+    const parsed = JSON.parse(raw) as Partial<RecordsState>;
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !parsed.byId ||
+      typeof parsed.byId !== "object" ||
+      !Array.isArray(parsed.allIds) ||
+      !parsed.counters ||
+      typeof parsed.counters !== "object"
+    ) {
+      return undefined;
+    }
+    return parsed as RecordsState;
   } catch {
     return undefined;
   }
@@ -18,7 +29,6 @@ function loadPreloadedState() {
 export function makeStore() {
   const store = configureStore({
     reducer: { records: recordsReducer },
-    preloadedState: loadPreloadedState(),
   });
 
   if (typeof window !== "undefined") {

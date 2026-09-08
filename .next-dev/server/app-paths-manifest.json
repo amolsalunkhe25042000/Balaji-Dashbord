@@ -1,0 +1,6 @@
+{
+  "/record/[id]/quotation/page": "app/record/[id]/quotation/page.js",
+  "/page": "app/page.js",
+  "/visits/page": "app/visits/page.js",
+  "/approved/page": "app/approved/page.js"
+}

@@ -1,0 +1,106 @@
+Core Changes
+This is a substantial development PR that transforms the Balaji CRM from a basic quotation/invoice tracker into a fully-featured business management system. Key architectural additions include:
+
+1. New Pages & Navigation
+/approved - Dedicated approved customers & jobs view with Excel export
+/visits - Customer visits & approval queue management
+/notifications - Centralized notification hub for enquiries, approvals, and payment reminders
+/owner - Financial analytics with profit/expense tracking (requires password protection)
+/settings - Dashboard customization, workspace branding, and data management
+/help - Comprehensive user guide with FAQ and workflow documentation
+2. State Management Overhaul
+New settingsSlice.ts Redux reducer for dashboard customization:
+Dashboard widget visibility toggles
+Management panel selection
+Status filter configuration
+Workspace branding (customizable company name)
+Enhanced recordsSlice.ts with:
+Expense tracking (labor, material, transport, other categories)
+Improved payment validation
+New selector with memoization for performance
+3. Financial & Expense Tracking
+New Expense type in types.ts with category support
+/owner page featuring:
+Revenue vs. expense trend charts (using Recharts)
+Job profitability analysis
+Expense ledger with edit/delete functionality
+Monthly financial summaries
+4. Workflow Enhancements
+Approved status added to job pipeline:
+New state between "quotation_sent" and "invoiced"
+Customers approve quotations before work begins
+Prevents auto-invoice creation; requires explicit user action
+Enhanced quotation logic:
+Can reopen requests (toggle to "request_closed")
+Clear approval workflow
+Better state transitions
+5. UI/UX Improvements
+Header redesign (components/TopNav.tsx):
+Branded navigation bar with logo/subtitle
+Icon-based navigation
+Notification badge with unread count
+Mobile hamburger menu
+User avatar display
+Password-protected pages (ProtectedPage.tsx):
+Daily access code (date-based: DDXXXXXX format)
+Lockout after 5 failed attempts (30-minute cooldown)
+Settings & owner finance require authentication
+Enhanced CSS for header, buttons, and responsiveness
+Other Key Changes
+Data Persistence & Hydration
+store.ts improvements:
+Loads stored records and settings on app initialization
+Validates stored data before hydration
+Handles backward compatibility (adds empty expenses array to old records)
+Library Additions
+Recharts (v3.10.1) - Data visualization charts
+XLSX (v0.18.5) - Excel export functionality
+Enhanced charting capabilities: Line, Bar, Pie, Treemap charts
+Type System Expansion
+New JobStatus: "approved"
+New Expense type: id, category, description, amount, date, note
+Improved type safety throughout
+Utility Functions
+localDateInput() - Consistent date formatting
+lineItemTotal() - Line item calculation helper
+isInvoiceRecord() - Determine if record has an invoice
+isApprovedWork() - Filter approved work items
+Code Quality Observations
+✅ Strengths
+Clean separation of concerns - New features in dedicated files
+Backward compatibility - Handles old data structure gracefully
+Performance optimization - Uses Redux selectors with memoization
+Security considerations - Password-protected sensitive areas
+Responsive design - Mobile-first approach with proper breakpoints
+Type safety - Comprehensive TypeScript types throughout
+User experience - Thoughtful error handling and validation
+⚠️ Areas for Attention
+ProtectedPage.tsx - Password logic
+
+Hard-coded password suffix "992125" - consider environment variables
+Daily password format (DDXXXXXX) should be documented
+localStorage dependency could fail in private browsing
+ManagementDashboard.tsx - Chart complexity
+
+Large file with multiple charting concerns mixed together
+Could benefit from component extraction (separate chart components)
+Validation inconsistencies
+
+Payment validation checks balance in addPayment() but amount checking could be more consistent
+Expense amount validation duplicated across multiple functions
+File size - recordsSlice.ts and store.ts are becoming large
+
+Notification system - Uses localStorage event listeners instead of built-in state management
+
+Merge Readiness Assessment
+Status: ✅ Ready with minor considerations
+
+Checklist:
+
+ Password in code should be moved to environment variables
+ Consider extracting chart components for better maintainability
+ Add comments documenting daily password format
+ Test backward compatibility with old records
+ Verify Excel export functionality
+ Test mobile responsiveness on actual devices
+ Ensure notification sync works across tabs

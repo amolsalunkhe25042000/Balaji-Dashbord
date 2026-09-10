@@ -5,12 +5,28 @@ import settingsReducer, { ALL_JOB_STATUSES, DEFAULT_SETTINGS, MANAGEMENT_PANELS,
 export const STORAGE_KEY = "balaji_crm_state_v1";
 export const SETTINGS_STORAGE_KEY = "balaji_crm_settings_v1";
 
+async function syncRecordsToGoogleSheets(records: RecordsState) {
+  if (process.env.NEXT_PUBLIC_ENABLE_SHEETS_SYNC !== "true") return;
+  try {
+    const response = await fetch("/api/sheets/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ records: Object.values(records.byId) }),
+      keepalive: true,
+    });
+    if (!response.ok) console.error("Google Sheets sync failed", await response.text());
+  } catch {
+    // Local storage remains the offline fallback when the API is unavailable.
+  }
+}
+
 export function loadStoredRecords() {
   if (typeof window === "undefined") return undefined;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return undefined;
     const parsed = JSON.parse(raw) as Partial<RecordsState>;
+
     if (
       !parsed ||
       typeof parsed !== "object" ||
@@ -81,8 +97,10 @@ export function makeStore() {
 
   if (typeof window !== "undefined") {
     let saveTimer: ReturnType<typeof setTimeout> | null = null;
+    let sheetsTimer: ReturnType<typeof setTimeout> | null = null;
     store.subscribe(() => {
       if (saveTimer) clearTimeout(saveTimer);
+      if (sheetsTimer) clearTimeout(sheetsTimer);
       // debounce so rapid typing doesn't hammer localStorage
       saveTimer = setTimeout(() => {
         try {
@@ -92,6 +110,9 @@ export function makeStore() {
           /* ignore quota / private-browsing errors */
         }
       }, 250);
+      sheetsTimer = setTimeout(() => {
+        void syncRecordsToGoogleSheets(store.getState().records);
+      }, 750);
     });
   }
 

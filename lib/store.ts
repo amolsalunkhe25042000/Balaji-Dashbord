@@ -1,22 +1,28 @@
 import { configureStore } from "@reduxjs/toolkit";
 import recordsReducer, { RecordsState } from "./recordsSlice";
 import settingsReducer, { ALL_JOB_STATUSES, DEFAULT_SETTINGS, MANAGEMENT_PANELS, OPERATIONS_COLUMNS, SettingsState } from "./settingsSlice";
+import { BusinessExpense, Expense } from "./types";
 
 export const STORAGE_KEY = "balaji_crm_state_v1";
 export const SETTINGS_STORAGE_KEY = "balaji_crm_settings_v1";
 
-async function syncRecordsToGoogleSheets(records: RecordsState) {
-  if (process.env.NEXT_PUBLIC_ENABLE_SHEETS_SYNC !== "true") return;
+export async function syncRecordsToGoogleSheets(records: RecordsState): Promise<boolean> {
+  if (process.env.NEXT_PUBLIC_ENABLE_SHEETS_SYNC !== "true") return false;
   try {
     const response = await fetch("/api/sheets/sync", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ records: Object.values(records.byId) }),
+      body: JSON.stringify({ records: Object.values(records.byId), businessExpenses: records.businessExpenses || [] }),
       keepalive: true,
     });
-    if (!response.ok) console.error("Google Sheets sync failed", await response.text());
+    if (!response.ok) {
+      console.error("Google Sheets sync failed", await response.text());
+      return false;
+    }
+    return true;
   } catch {
     // Local storage remains the offline fallback when the API is unavailable.
+    return false;
   }
 }
 
@@ -39,8 +45,28 @@ export function loadStoredRecords() {
       return undefined;
     }
     const records = parsed as RecordsState;
+    if (!Array.isArray(records.businessExpenses)) records.businessExpenses = [];
+    records.businessExpenses = records.businessExpenses
+      .filter((expense): expense is BusinessExpense => Boolean(expense && typeof expense === "object" && typeof expense.id === "string"))
+      .map((expense) => ({
+        ...expense,
+        amount: Number(expense.amount) || 0,
+        description: typeof expense.description === "string" ? expense.description : "",
+        date: typeof expense.date === "string" ? expense.date : "",
+      }));
     Object.values(records.byId).forEach((record) => {
       if (!Array.isArray(record.expenses)) record.expenses = [];
+      record.expenses = record.expenses
+        .filter((expense): expense is Expense => Boolean(expense && typeof expense === "object" && typeof expense.id === "string"))
+        .map((expense) => ({
+          ...expense,
+          jobId: expense.jobId || record.id,
+          amount: Number(expense.amount) || 0,
+          description: typeof expense.description === "string" ? expense.description : "",
+          date: typeof expense.date === "string" ? expense.date : "",
+          notes: expense.notes ?? expense.note,
+        }));
+      if (!Array.isArray(record.payments)) record.payments = [];
     });
     return records;
   } catch {

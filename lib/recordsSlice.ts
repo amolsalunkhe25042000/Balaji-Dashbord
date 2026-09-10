@@ -1,5 +1,5 @@
 import { createSelector, createSlice, PayloadAction, ThunkAction, AnyAction } from "@reduxjs/toolkit";
-import { Expense, JobRecord, JobStatus, LineItem, Payment, ServiceKey } from "./types";
+import { BusinessExpense, Expense, JobRecord, JobStatus, LineItem, Payment, ServiceKey } from "./types";
 import { SERVICES } from "./services";
 import { computeTotals, localDateInput, newId } from "./money";
 import { counterKey, dateStamp } from "./numbering";
@@ -11,12 +11,14 @@ export interface RecordsState {
   byId: Record<string, JobRecord>;
   allIds: string[];
   counters: Record<string, number>; // key: `${prefix}${stamp}` -> last used sequence
+  businessExpenses: BusinessExpense[];
 }
 
 const initialState: RecordsState = {
   byId: {},
   allIds: [],
   counters: {},
+  businessExpenses: [],
 };
 
 export function makeBlankRecord(service: ServiceKey): JobRecord {
@@ -75,13 +77,17 @@ const recordsSlice = createSlice({
       if (!rec) return;
       const amount = Number(action.payload.payment.amount);
       if (!Number.isFinite(amount) || amount <= 0 || amount > computeTotals(rec).balanceDue) return;
-      rec.payments.push(action.payload.payment);
+      rec.payments.push({ ...action.payload.payment, amount });
+      const paidAmount = rec.payments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
+      rec.status = paidAmount >= computeTotals(rec).total ? "paid" : "partially_paid";
       rec.updatedAt = new Date().toISOString();
     },
     removePayment(state, action: PayloadAction<{ id: string; paymentId: string }>) {
       const rec = state.byId[action.payload.id];
       if (!rec) return;
       rec.payments = rec.payments.filter((p) => p.id !== action.payload.paymentId);
+      const totals = computeTotals(rec);
+      rec.status = totals.paidAmount <= 0 ? "invoiced" : totals.paidAmount >= totals.total ? "paid" : "partially_paid";
       rec.updatedAt = new Date().toISOString();
     },
     addExpense(state, action: PayloadAction<{ id: string; expense: Expense }>) {
@@ -89,8 +95,23 @@ const recordsSlice = createSlice({
       if (!rec) return;
       const amount = Number(action.payload.expense.amount);
       if (!Number.isFinite(amount) || amount <= 0) return;
-      rec.expenses.push({ ...action.payload.expense, amount });
+      rec.expenses.push({ ...action.payload.expense, amount, jobId: rec.id });
       rec.updatedAt = new Date().toISOString();
+    },
+    addBusinessExpense(state, action: PayloadAction<BusinessExpense>) {
+      const amount = Number(action.payload.amount);
+      if (!Number.isFinite(amount) || amount <= 0 || !action.payload.description.trim()) return;
+      state.businessExpenses.push({ ...action.payload, amount, description: action.payload.description.trim() });
+    },
+    updateBusinessExpense(state, action: PayloadAction<BusinessExpense>) {
+      const amount = Number(action.payload.amount);
+      if (!Number.isFinite(amount) || amount <= 0 || !action.payload.description.trim()) return;
+      const index = state.businessExpenses.findIndex((expense) => expense.id === action.payload.id);
+      if (index < 0) return;
+      state.businessExpenses[index] = { ...action.payload, amount, description: action.payload.description.trim() };
+    },
+    removeBusinessExpense(state, action: PayloadAction<string>) {
+      state.businessExpenses = state.businessExpenses.filter((expense) => expense.id !== action.payload);
     },
     updateExpense(state, action: PayloadAction<{ id: string; expense: Expense }>) {
       const rec = state.byId[action.payload.id];
@@ -99,7 +120,7 @@ const recordsSlice = createSlice({
       if (!Number.isFinite(amount) || amount <= 0 || !action.payload.expense.description.trim()) return;
       const index = rec.expenses.findIndex((expense) => expense.id === action.payload.expense.id);
       if (index < 0) return;
-      rec.expenses[index] = { ...action.payload.expense, amount, description: action.payload.expense.description.trim() };
+      rec.expenses[index] = { ...action.payload.expense, amount, description: action.payload.expense.description.trim(), jobId: rec.id };
       rec.updatedAt = new Date().toISOString();
     },
     removeExpense(state, action: PayloadAction<{ id: string; expenseId: string }>) {
@@ -111,7 +132,12 @@ const recordsSlice = createSlice({
     setStatus(state, action: PayloadAction<{ id: string; status: JobStatus }>) {
       const rec = state.byId[action.payload.id];
       if (!rec) return;
-      rec.status = action.payload.status;
+      if (rec.invoiceCreated && ["invoiced", "partially_paid", "paid"].includes(action.payload.status)) {
+        const totals = computeTotals(rec);
+        rec.status = totals.paidAmount <= 0 ? "invoiced" : totals.paidAmount >= totals.total ? "paid" : "partially_paid";
+      } else {
+        rec.status = action.payload.status;
+      }
       rec.updatedAt = new Date().toISOString();
     },
     deleteRecord(state, action: PayloadAction<string>) {
@@ -137,6 +163,9 @@ export const {
   addExpense,
   updateExpense,
   removeExpense,
+  addBusinessExpense,
+  updateBusinessExpense,
+  removeBusinessExpense,
   setStatus,
   deleteRecord,
   hydrate,

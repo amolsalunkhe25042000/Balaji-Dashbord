@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import {
   selectRecordById,
@@ -19,6 +20,7 @@ import { Payment } from "@/lib/types";
 
 export default function InvoicePage({ params }: { params: { id: string } }) {
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const record = useAppSelector((s: RootState) => selectRecordById(s, params.id));
 
   if (!record) {
@@ -73,20 +75,16 @@ export default function InvoicePage({ params }: { params: { id: string } }) {
 
   const handleAddPayment = (payment: Payment) => {
     dispatch(addPayment({ id: record.id, payment }));
-    const newPaid = totals.paidAmount + payment.amount;
-    const nextStatus = newPaid >= totals.total ? "paid" : "partially_paid";
-    dispatch(setStatus({ id: record.id, status: nextStatus }));
   };
 
   const handleRemovePayment = (paymentId: string) => {
     dispatch(removePayment({ id: record.id, paymentId }));
-    const remaining = record.payments.filter((p) => p.id !== paymentId);
-    const remainingPaid = remaining.reduce((s, p) => s + p.amount, 0);
-    const nextStatus = remainingPaid <= 0 ? "invoiced" : remainingPaid >= totals.total ? "paid" : "partially_paid";
-    dispatch(setStatus({ id: record.id, status: nextStatus }));
   };
 
-  const closeJob = () => dispatch(setStatus({ id: record.id, status: "closed" }));
+  const closeJob = () => {
+    dispatch(setStatus({ id: record.id, status: "closed" }));
+    router.push(`/owner?job=${encodeURIComponent(record.id)}#job-expense-form`);
+  };
   const reopenJob = () => dispatch(setStatus({ id: record.id, status: totals.balanceDue > 0 ? "partially_paid" : "paid" }));
 
   return (
@@ -115,13 +113,11 @@ export default function InvoicePage({ params }: { params: { id: string } }) {
             <button className="btn-outline" onClick={reopenJob}>
               Reopen job
             </button>
-          ) : (
-            totals.balanceDue <= 0 && (
-              <button className="btn-primary" onClick={closeJob}>
-                Mark job closed / complete
-              </button>
-            )
-          )}
+          ) : totals.balanceDue <= 0 ? (
+            <button className="btn-primary" onClick={closeJob}>
+              Complete Work
+            </button>
+          ) : null}
         </div>
       </div>
 

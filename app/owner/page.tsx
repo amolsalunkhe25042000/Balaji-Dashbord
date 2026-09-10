@@ -2,27 +2,20 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
-import { addExpense, removeExpense, selectAllRecords, updateExpense } from "@/lib/recordsSlice";
+import { addBusinessExpense, addExpense, removeBusinessExpense, removeExpense, selectAllRecords, updateBusinessExpense, updateExpense } from "@/lib/recordsSlice";
 import { computeTotals, fmtMoney, formatDate, isInvoiceRecord, newId } from "@/lib/money";
 import { SERVICES } from "@/lib/services";
-import { Expense, ExpenseCategory } from "@/lib/types";
+import { BusinessExpense, Expense, ExpenseCategory } from "@/lib/types";
+import { BUSINESS_EXPENSE_CATEGORIES, JOB_EXPENSE_CATEGORIES, JOB_EXPENSE_COLORS, JOB_EXPENSE_LABELS } from "@/lib/expenseCategories";
 import ProtectedPage from "@/components/ProtectedPage";
 
-const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
-  labor: "Labor charges",
-  material: "Materials",
-  transport: "Transport",
-  other: "Other expense",
-};
-const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
-  labor: "#D9622B",
-  material: "#0F8B8D",
-  transport: "#2563EB",
-  other: "#7C3AED",
-};
-const CATEGORIES = Object.keys(CATEGORY_LABELS) as ExpenseCategory[];
+const CATEGORIES = JOB_EXPENSE_CATEGORIES;
+const CATEGORY_LABELS = JOB_EXPENSE_LABELS;
+const CATEGORY_COLORS = JOB_EXPENSE_COLORS;
+const BUSINESS_CATEGORIES = BUSINESS_EXPENSE_CATEGORIES;
 
 function monthLabel(date: string) {
   return new Date(`${date.slice(0, 7)}-01T00:00:00`).toLocaleDateString("en-IN", { month: "short", year: "2-digit" });
@@ -34,15 +27,28 @@ function monthKey(date: string) {
 
 export default function OwnerFinancePage() {
   const dispatch = useAppDispatch();
+  const searchParams = useSearchParams();
   const records = useAppSelector(selectAllRecords);
+  const businessExpenses = useAppSelector((state) => state.records.businessExpenses || []);
   const [selectedRecordId, setSelectedRecordId] = useState(records[0]?.id || "");
   const [category, setCategory] = useState<ExpenseCategory>("labor");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [note, setNote] = useState("");
+  const [vendor, setVendor] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("");
   const [period, setPeriod] = useState<"all" | "month">("all");
   const [editingExpense, setEditingExpense] = useState<{ recordId: string; expense: Expense } | null>(null);
+  const [businessCategory, setBusinessCategory] = useState(BUSINESS_CATEGORIES[0]);
+  const [businessDescription, setBusinessDescription] = useState("");
+  const [businessAmount, setBusinessAmount] = useState("");
+  const [businessDate, setBusinessDate] = useState(new Date().toISOString().slice(0, 10));
+  const [businessVendor, setBusinessVendor] = useState("");
+  const [businessPaymentMethod, setBusinessPaymentMethod] = useState("");
+  const [businessNotes, setBusinessNotes] = useState("");
+  const [editingBusinessExpense, setEditingBusinessExpense] = useState<BusinessExpense | null>(null);
+  const [businessSearch, setBusinessSearch] = useState("");
   const currentMonth = new Date().toISOString().slice(0, 7);
 
   const filteredRecords = useMemo(() => period === "all" ? records : records.filter((record) =>
@@ -80,16 +86,25 @@ export default function OwnerFinancePage() {
     if (!selectedRecordId && records[0]) setSelectedRecordId(records[0].id);
   }, [records, selectedRecordId]);
 
+  useEffect(() => {
+    const requestedJob = searchParams.get("job");
+    if (!requestedJob || !records.some((record) => record.id === requestedJob)) return;
+    setSelectedRecordId(requestedJob);
+    document.getElementById("job-expense-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [records, searchParams]);
+
   function saveExpense(event: FormEvent) {
     event.preventDefault();
     const numericAmount = Number(amount);
     if (!selectedRecordId || !description.trim() || !Number.isFinite(numericAmount) || numericAmount <= 0) return;
-    const expense = { id: editingExpense?.expense.id || newId("expense"), category, description: description.trim(), amount: numericAmount, date, note: note.trim() || undefined };
+    const expense = { id: editingExpense?.expense.id || newId("expense"), category, description: description.trim(), amount: numericAmount, date, vendor: vendor.trim() || undefined, paymentMethod: paymentMethod.trim() || undefined, notes: note.trim() || undefined, note: note.trim() || undefined };
     if (editingExpense) dispatch(updateExpense({ id: editingExpense.recordId, expense }));
     else dispatch(addExpense({ id: selectedRecordId, expense }));
     setDescription("");
     setAmount("");
     setNote("");
+    setVendor("");
+    setPaymentMethod("");
     setEditingExpense(null);
   }
 
@@ -101,6 +116,8 @@ export default function OwnerFinancePage() {
     setAmount(String(expense.amount));
     setDate(expense.date);
     setNote(expense.note || "");
+    setVendor(expense.vendor || "");
+    setPaymentMethod(expense.paymentMethod || "");
     window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
   }
 
@@ -109,6 +126,21 @@ export default function OwnerFinancePage() {
       dispatch(removeExpense({ id: recordId, expenseId }));
     }
   }
+
+  function saveBusinessExpense(event: FormEvent) {
+    event.preventDefault();
+    const numericAmount = Number(businessAmount);
+    if (!businessDescription.trim() || !Number.isFinite(numericAmount) || numericAmount <= 0) return;
+    const expense: BusinessExpense = { id: editingBusinessExpense?.id || newId("business-expense"), category: businessCategory, description: businessDescription.trim(), amount: numericAmount, date: businessDate, vendor: businessVendor.trim() || undefined, paymentMethod: businessPaymentMethod.trim() || undefined, notes: businessNotes.trim() || undefined };
+    dispatch(editingBusinessExpense ? updateBusinessExpense(expense) : addBusinessExpense(expense));
+    setBusinessDescription(""); setBusinessAmount(""); setBusinessVendor(""); setBusinessPaymentMethod(""); setBusinessNotes(""); setEditingBusinessExpense(null);
+  }
+
+  function editBusinessExpense(expense: BusinessExpense) {
+    setEditingBusinessExpense(expense); setBusinessCategory(expense.category); setBusinessDescription(expense.description); setBusinessAmount(String(expense.amount)); setBusinessDate(expense.date); setBusinessVendor(expense.vendor || ""); setBusinessPaymentMethod(expense.paymentMethod || ""); setBusinessNotes(expense.notes || "");
+  }
+
+  const visibleBusinessExpenses = businessExpenses.filter((expense) => `${expense.category} ${expense.description} ${expense.vendor || ""}`.toLowerCase().includes(businessSearch.toLowerCase()));
 
   return (
     <ProtectedPage title="Profit & expense control" description="Review revenue, expenses, and job profit before sharing financial information.">
@@ -132,20 +164,36 @@ export default function OwnerFinancePage() {
       </div>
 
       <section className="panel p-4">
-        <div className="mb-4"><p className="text-[11px] font-bold uppercase tracking-[0.18em] text-paint">Job cost entry</p><h2 className="font-display text-xl font-bold text-deep">Record a completed-job expense</h2><p className="text-xs text-muted mt-1">Add labor, material, travel, or any other cost against the visit that created it.</p></div>
+        <div id="job-expense-form" className="mb-4"><p className="text-[11px] font-bold uppercase tracking-[0.18em] text-paint">Work expense entry</p><h2 className="font-display text-xl font-bold text-deep">Add Work Expense</h2><p className="text-xs text-muted mt-1">Work Expenses are optional. Add any labor, material, travel, or other costs for this job.</p></div>
         <form onSubmit={saveExpense} className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
           <div className="xl:col-span-2"><label className="field-label" htmlFor="expense-job">Job / customer</label><select id="expense-job" className="field-input" value={selectedRecordId} onChange={(event) => setSelectedRecordId(event.target.value)}><option value="">Select a job</option>{recordsWithCosts.map((record) => <option key={record.id} value={record.id}>{record.customer.name || "Unnamed customer"} · {SERVICES[record.service].label}</option>)}</select></div>
           <div><label className="field-label" htmlFor="expense-category">Cost type</label><select id="expense-category" className="field-input" value={category} onChange={(event) => setCategory(event.target.value as ExpenseCategory)}>{CATEGORIES.map((key) => <option key={key} value={key}>{CATEGORY_LABELS[key]}</option>)}</select></div>
           <div><label className="field-label" htmlFor="expense-amount">Amount (₹)</label><input id="expense-amount" className="field-input" type="number" min="1" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0" required /></div>
           <div><label className="field-label" htmlFor="expense-date">Date</label><input id="expense-date" className="field-input" type="date" value={date} onChange={(event) => setDate(event.target.value)} required /></div>
-          <div className="flex items-end gap-2"><button type="submit" className="btn-primary w-full">{editingExpense ? "Update expense" : "Add expense"}</button>{editingExpense && <button type="button" className="btn-outline" onClick={() => { setEditingExpense(null); setDescription(""); setAmount(""); setNote(""); }}>Cancel</button>}</div>
+          <div className="flex items-end gap-2"><button type="submit" className="btn-primary w-full">{editingExpense ? "Update expense" : "Add expense"}</button>{editingExpense && <button type="button" className="btn-outline" onClick={() => { setEditingExpense(null); setDescription(""); setAmount(""); setNote(""); setVendor(""); setPaymentMethod(""); }}>Cancel</button>}</div>
           <div className="md:col-span-2 xl:col-span-3"><label className="field-label" htmlFor="expense-description">Description</label><input id="expense-description" className="field-input" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="e.g. 2 painters for 3 days" required /></div>
-          <div className="md:col-span-2 xl:col-span-3"><label className="field-label" htmlFor="expense-note">Note (optional)</label><input id="expense-note" className="field-input" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Supplier, bill number, or payment note" /></div>
+          <div><label className="field-label" htmlFor="expense-vendor">Vendor / paid to</label><input id="expense-vendor" className="field-input" value={vendor} onChange={(event) => setVendor(event.target.value)} placeholder="Optional" /></div>
+          <div><label className="field-label" htmlFor="expense-payment-method">Payment method</label><input id="expense-payment-method" className="field-input" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)} placeholder="Cash, UPI, bank" /></div>
+          <div className="md:col-span-2 xl:col-span-2"><label className="field-label" htmlFor="expense-note">Notes (optional)</label><input id="expense-note" className="field-input" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Supplier, bill number, or payment note" /></div>
         </form>
       </section>
 
       <section className="panel overflow-hidden"><div className="panel-head"><div><h2>Job profitability</h2><p className="mt-1 text-[11px] normal-case tracking-normal text-muted">Profit is calculated from billed invoice total minus all expenses.</p></div><span className="text-xs text-muted">{filteredRecords.length} jobs</span></div><div className="overflow-x-auto"><table className="w-full min-w-[760px] text-xs"><thead><tr className="border-b border-line text-left uppercase tracking-wide text-muted"><th className="px-3 py-3">Customer</th><th className="px-3 py-3">Status</th><th className="px-3 py-3 text-right">Invoice</th><th className="px-3 py-3 text-right">Collected</th><th className="px-3 py-3 text-right">Expense</th><th className="px-3 py-3 text-right">Profit / loss</th><th className="px-3 py-3 text-right">Action</th></tr></thead><tbody>{recordsWithCosts.map((record) => { const totals = computeTotals(record); const revenue = isInvoiceRecord(record) && (period === "all" || monthKey(record.invoiceDate) === currentMonth) ? totals.total : 0; const collected = isInvoiceRecord(record) ? record.payments.filter((payment) => period === "all" || monthKey(payment.date) === currentMonth).reduce((sum, payment) => sum + payment.amount, 0) : 0; const expenseTotal = (record.expenses || []).filter((expense) => period === "all" || monthKey(expense.date) === currentMonth).reduce((sum, expense) => sum + expense.amount, 0); const profit = revenue - expenseTotal; return <tr key={record.id} className="border-b border-panel"><td className="px-3 py-3"><div className="font-semibold text-deep">{record.customer.name || "Unnamed customer"}</div><div className="text-[11px] text-muted">{SERVICES[record.service].label} · {record.expenses?.length || 0} costs</div></td><td className="px-3 py-3 capitalize text-muted">{record.status.replaceAll("_", " ")}</td><td className="px-3 py-3 text-right font-mono">₹{fmtMoney(revenue)}</td><td className="px-3 py-3 text-right font-mono text-water">₹{fmtMoney(collected)}</td><td className="px-3 py-3 text-right font-mono text-paint">₹{fmtMoney(expenseTotal)}</td><td className={`px-3 py-3 text-right font-mono font-bold ${profit >= 0 ? "text-emerald-700" : "text-red-700"}`}>{profit < 0 ? "-" : ""}₹{fmtMoney(Math.abs(profit))}</td><td className="px-3 py-3 text-right"><Link href={record.invoiceCreated ? `/record/${record.id}/invoice` : `/record/${record.id}/quotation`} className="action-view">Open job</Link></td></tr> })}</tbody></table></div><div className="flex flex-wrap gap-4 border-t border-line bg-panel px-3 py-3 text-xs"><span className="font-semibold text-deep">Loss total: <b className="text-red-700">₹{fmtMoney(loss)}</b></span><span className="text-muted">Pending collection: ₹{fmtMoney(Math.max(stats.billed - stats.collected, 0))}</span></div></section>
       <section className="panel overflow-hidden"><div className="panel-head"><div><h2>Expense ledger</h2><p className="mt-1 text-[11px] normal-case tracking-normal text-muted">Correct or remove individual costs whenever needed.</p></div><span className="text-xs text-muted">{expenseRows.length} entries</span></div><div className="overflow-x-auto"><table className="w-full min-w-[650px] text-xs"><thead><tr className="border-b border-line text-left uppercase tracking-wide text-muted"><th className="px-3 py-3">Date</th><th className="px-3 py-3">Job</th><th className="px-3 py-3">Category</th><th className="px-3 py-3">Description</th><th className="px-3 py-3 text-right">Amount</th><th className="px-3 py-3 text-right">Action</th></tr></thead><tbody>{expenseRows.map(({ record, expense }) => <tr key={expense.id} className="border-b border-panel"><td className="px-3 py-3 text-muted">{formatDate(expense.date)}</td><td className="px-3 py-3 font-semibold text-deep">{record.customer.name || "Unnamed customer"}</td><td className="px-3 py-3"><span className="rounded-full px-2 py-1 text-[10px] font-bold" style={{ backgroundColor: `${CATEGORY_COLORS[expense.category]}18`, color: CATEGORY_COLORS[expense.category] }}>{CATEGORY_LABELS[expense.category]}</span></td><td className="px-3 py-3 text-muted">{expense.description}{expense.note ? <span className="block text-[10px]">{expense.note}</span> : null}</td><td className="px-3 py-3 text-right font-mono font-semibold text-paint">₹{fmtMoney(expense.amount)}</td><td className="px-3 py-3 text-right"><div className="flex justify-end gap-2"><button type="button" className="action-view" onClick={() => editExpense(record.id, expense)}>Edit</button><button type="button" className="action-view" onClick={() => deleteExpense(record.id, expense.id)}>Remove</button></div></td></tr>)}</tbody></table>{!expenseRows.length && <p className="px-4 py-8 text-center text-sm text-muted">No expenses recorded for this period.</p>}</div></section>
+      <section className="panel p-4">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><p className="text-[11px] font-bold uppercase tracking-[0.18em] text-water">General company costs</p><h2 className="font-display text-xl font-bold text-deep">Business expenses</h2><p className="mt-1 text-xs text-muted">These costs stay separate from job expenses and reduce net profit.</p></div><input className="field-input max-w-xs" value={businessSearch} onChange={(event) => setBusinessSearch(event.target.value)} placeholder="Search category, description, vendor" /></div>
+        <form onSubmit={saveBusinessExpense} className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div><label className="field-label" htmlFor="business-category">Category</label><select id="business-category" className="field-input" value={businessCategory} onChange={(event) => setBusinessCategory(event.target.value)}>{BUSINESS_CATEGORIES.map((item) => <option key={item}>{item}</option>)}</select></div>
+          <div><label className="field-label" htmlFor="business-date">Date</label><input id="business-date" className="field-input" type="date" value={businessDate} onChange={(event) => setBusinessDate(event.target.value)} required /></div>
+          <div><label className="field-label" htmlFor="business-amount">Amount (₹)</label><input id="business-amount" className="field-input" type="number" min="1" step="0.01" value={businessAmount} onChange={(event) => setBusinessAmount(event.target.value)} required /></div>
+          <div><label className="field-label" htmlFor="business-vendor">Vendor / paid to</label><input id="business-vendor" className="field-input" value={businessVendor} onChange={(event) => setBusinessVendor(event.target.value)} /></div>
+          <div className="md:col-span-2"><label className="field-label" htmlFor="business-description">Description</label><input id="business-description" className="field-input" value={businessDescription} onChange={(event) => setBusinessDescription(event.target.value)} required /></div>
+          <div><label className="field-label" htmlFor="business-payment">Payment method</label><input id="business-payment" className="field-input" value={businessPaymentMethod} onChange={(event) => setBusinessPaymentMethod(event.target.value)} placeholder="Cash, UPI, bank" /></div>
+          <div><label className="field-label" htmlFor="business-notes">Notes</label><input id="business-notes" className="field-input" value={businessNotes} onChange={(event) => setBusinessNotes(event.target.value)} /></div>
+          <div className="flex items-end gap-2"><button className="btn-primary" type="submit">{editingBusinessExpense ? "Update expense" : "Add expense"}</button>{editingBusinessExpense && <button className="btn-outline" type="button" onClick={() => setEditingBusinessExpense(null)}>Cancel</button>}</div>
+        </form>
+        <div className="mt-4 overflow-x-auto"><table className="w-full min-w-[680px] text-xs"><thead><tr className="border-b border-line text-left uppercase tracking-wide text-muted"><th className="px-3 py-3">Date</th><th className="px-3 py-3">Category</th><th className="px-3 py-3">Description</th><th className="px-3 py-3">Vendor</th><th className="px-3 py-3 text-right">Amount</th><th className="px-3 py-3 text-right">Action</th></tr></thead><tbody>{visibleBusinessExpenses.map((expense) => <tr key={expense.id} className="border-b border-panel"><td className="px-3 py-3 text-muted">{formatDate(expense.date)}</td><td className="px-3 py-3">{expense.category}</td><td className="px-3 py-3 font-semibold text-deep">{expense.description}<span className="block text-[10px] text-muted">{expense.paymentMethod || ""}{expense.notes ? ` · ${expense.notes}` : ""}</span></td><td className="px-3 py-3 text-muted">{expense.vendor || "—"}</td><td className="px-3 py-3 text-right font-mono font-semibold text-paint">₹{fmtMoney(expense.amount)}</td><td className="px-3 py-3 text-right"><button type="button" className="action-view mr-2" onClick={() => editBusinessExpense(expense)}>Edit</button><button type="button" className="action-view" onClick={() => dispatch(removeBusinessExpense(expense.id))}>Remove</button></td></tr>)}</tbody></table>{!visibleBusinessExpenses.length && <p className="px-4 py-8 text-center text-sm text-muted">No business expenses recorded yet.</p>}</div>
+      </section>
     </div>
     </ProtectedPage>
   );

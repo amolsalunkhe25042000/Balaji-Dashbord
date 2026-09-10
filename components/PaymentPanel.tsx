@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { JobRecord, Payment } from "@/lib/types";
 import { PAYMENT_MODES } from "@/lib/services";
-import { fmtMoney, newId } from "@/lib/money";
+import { fmtMoney, localDateInput, newId } from "@/lib/money";
 
 export default function PaymentPanel({
   record,
@@ -18,19 +18,26 @@ export default function PaymentPanel({
 }) {
   const [amount, setAmount] = useState<number | "">("");
   const [mode, setMode] = useState(PAYMENT_MODES[0]);
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(localDateInput());
+  const [error, setError] = useState("");
 
   const submit = () => {
     const amt = Number(amount);
     if (!amt || amt <= 0) return;
+    if (amt > balanceDue) {
+      setError(`Payment cannot exceed the remaining balance of ₹ ${fmtMoney(balanceDue)}.`);
+      return;
+    }
     onAddPayment({ id: newId("pay"), amount: amt, mode, date });
     setAmount("");
+    setError("");
   };
 
   const collectRemaining = () => {
     if (balanceDue <= 0) return;
     onAddPayment({ id: newId("pay"), amount: balanceDue, mode, date });
     setAmount("");
+    setError("");
   };
 
   return (
@@ -39,7 +46,7 @@ export default function PaymentPanel({
         <h2>Collect payment</h2>
       </div>
       <div className="panel-body">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
           <div>
             <label className="field-label">Amount received (₹)</label>
             <input
@@ -68,6 +75,7 @@ export default function PaymentPanel({
         <button type="button" className="btn-primary justify-center" onClick={submit}>
           + Add payment
         </button>
+        {error && <p className="text-xs font-semibold text-red-600">{error}</p>}
         {balanceDue > 0 && (
           <button
             type="button"
@@ -83,8 +91,8 @@ export default function PaymentPanel({
             <div className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">Payment history</div>
             <ul className="flex flex-col gap-1.5">
               {record.payments.map((p) => (
-                <li key={p.id} className="flex items-center justify-between text-sm bg-panel rounded-md px-2.5 py-1.5">
-                  <span>
+                <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 text-sm bg-panel rounded-md px-2.5 py-1.5">
+                  <span className="min-w-0 break-words">
                     ₹ {fmtMoney(p.amount)} · {p.mode} · {p.date}
                   </span>
                   <button

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { LineItem } from "@/lib/types";
 import { PresetItem } from "@/lib/services";
 import { UNITS } from "@/lib/services";
-import { fmtMoney, newId } from "@/lib/money";
+import { fmtMoney, lineItemTotal, newId } from "@/lib/money";
 
 export default function ItemsEditor({
   items,
@@ -60,7 +60,7 @@ export default function ItemsEditor({
       </div>
 
       {items.map((it, idx) => {
-        const amount = (Number(it.qty) || 0) * (Number(it.rate) || 0);
+        const amount = lineItemTotal(it);
         return (
           <div key={it.id} className="border border-line rounded-lg p-3 flex flex-col gap-2 bg-[#FBFCFB]">
             <div className="flex gap-2 items-start">
@@ -82,7 +82,7 @@ export default function ItemsEditor({
                 ✕
               </button>
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 min-[420px]:grid-cols-3 gap-2">
               <div>
                 <label className="field-label">Unit</label>
                 <select
@@ -101,6 +101,7 @@ export default function ItemsEditor({
                 <label className="field-label">Qty</label>
                 <input
                   type="number"
+                  min="0"
                   className="field-input"
                   value={it.qty}
                   placeholder="0"
@@ -111,6 +112,7 @@ export default function ItemsEditor({
                 <label className="field-label">Rate (₹)</label>
                 <input
                   type="number"
+                  min="0"
                   className="field-input"
                   value={it.rate}
                   placeholder="0"

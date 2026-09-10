@@ -3,6 +3,7 @@ export type ServiceKey = "painting" | "waterproofing";
 export type JobStatus =
   | "enquiry" // draft, nothing printed yet
   | "quotation_sent" // quotation printed, no invoice yet
+  | "approved" // customer approved the quotation, ready to start work
   | "invoiced" // invoice created, ₹0 paid
   | "partially_paid" // some payment received
   | "paid" // fully paid
@@ -29,6 +30,17 @@ export interface Payment {
   amount: number;
   mode: string;
   date: string; // yyyy-mm-dd
+  note?: string;
+}
+
+export type ExpenseCategory = "labor" | "material" | "transport" | "other";
+
+export interface Expense {
+  id: string;
+  category: ExpenseCategory;
+  description: string;
+  amount: number;
+  date: string;
   note?: string;
 }
 
@@ -66,6 +78,7 @@ export interface JobRecord {
   invoiceCreated: boolean;
 
   payments: Payment[];
+  expenses: Expense[];
 
   warranty: string;
   paymentTerms: string;

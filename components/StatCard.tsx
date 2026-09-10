@@ -19,10 +19,10 @@ export default function StatCard({
       : "text-deep";
 
   return (
-    <div className="panel p-4 flex flex-col gap-1">
-      <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">{label}</span>
-      <span className={`text-2xl font-bold font-display ${toneClass}`}>{value}</span>
-      {sub && <span className="text-xs text-muted">{sub}</span>}
+    <div className="panel min-w-0 p-3 sm:p-4 flex flex-col gap-1">
+      <span className="break-words text-[11px] font-semibold uppercase tracking-wide text-muted">{label}</span>
+      <span className={`break-words text-xl sm:text-2xl font-bold font-display ${toneClass}`}>{value}</span>
+      {sub && <span className="break-words text-xs text-muted">{sub}</span>}
     </div>
   );
 }

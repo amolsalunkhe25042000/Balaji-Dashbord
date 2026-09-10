@@ -1,4 +1,23 @@
-import { JobRecord, Totals } from "./types";
+import { JobRecord, LineItem, Totals } from "./types";
+
+export function localDateInput(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function lineItemTotal(item: LineItem): number {
+  return (Number(item.qty) || 0) * (Number(item.rate) || 0);
+}
+
+export function isInvoiceRecord(record: JobRecord): boolean {
+  return record.invoiceCreated || ["invoiced", "partially_paid", "paid", "closed"].includes(record.status);
+}
+
+export function isApprovedWork(record: JobRecord): boolean {
+  return ["approved", "invoiced", "partially_paid", "paid", "closed"].includes(record.status);
+}
 
 export function fmtMoney(n: number): string {
   return Math.round(n).toLocaleString("en-IN");
@@ -36,13 +55,12 @@ export function numberToWordsIndian(input: number): string {
 }
 
 export function computeTotals(record: JobRecord): Totals {
-  const subtotal = record.items.reduce(
-    (sum, it) => sum + (Number(it.qty) || 0) * (Number(it.rate) || 0),
-    0
-  );
-  const discountAmount = (subtotal * (Number(record.discountPercent) || 0)) / 100;
+  const subtotal = record.items.reduce((sum, item) => sum + lineItemTotal(item), 0);
+  const discountPercent = Math.min(Math.max(Number(record.discountPercent) || 0, 0), 100);
+  const discountAmount = (subtotal * discountPercent) / 100;
   const taxable = subtotal - discountAmount;
-  const gstAmount = record.gstEnabled ? (taxable * (Number(record.gstPercent) || 0)) / 100 : 0;
+  const gstPercent = Math.max(Number(record.gstPercent) || 0, 0);
+  const gstAmount = record.gstEnabled ? (taxable * gstPercent) / 100 : 0;
   const total = Math.round(taxable + gstAmount);
   const paidAmount = record.payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
   const balanceDue = Math.max(total - paidAmount, 0);

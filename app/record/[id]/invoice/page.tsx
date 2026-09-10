@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import {
@@ -12,7 +11,7 @@ import {
   setStatus,
 } from "@/lib/recordsSlice";
 import { RootState } from "@/lib/store";
-import { computeTotals } from "@/lib/money";
+import { computeTotals, localDateInput } from "@/lib/money";
 import DocumentPreview from "@/components/DocumentPreview";
 import PaymentPanel from "@/components/PaymentPanel";
 import StatusBadge from "@/components/StatusBadge";
@@ -21,26 +20,6 @@ import { Payment } from "@/lib/types";
 export default function InvoicePage({ params }: { params: { id: string } }) {
   const dispatch = useAppDispatch();
   const record = useAppSelector((s: RootState) => selectRecordById(s, params.id));
-
-  // Auto-create the invoice the moment this page is opened for a record that doesn't have one yet —
-  // this is the "print quotation -> move to invoice page" handoff.
-  useEffect(() => {
-    if (record && !record.invoiceCreated) {
-      const invoiceNo = dispatch(commitNextNumber(record.service, "invoice"));
-      dispatch(
-        patchRecord({
-          id: record.id,
-          patch: {
-            invoiceNo,
-            invoiceDate: new Date().toISOString().slice(0, 10),
-            invoiceCreated: true,
-            status: "invoiced",
-          },
-        })
-      );
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [record?.id, record?.invoiceCreated]);
 
   if (!record) {
     return (
@@ -54,7 +33,40 @@ export default function InvoicePage({ params }: { params: { id: string } }) {
   }
 
   if (!record.invoiceCreated) {
-    return <div className="panel p-6 text-center text-muted">Creating invoice…</div>;
+    const canCreateInvoice = record.quotationPrinted && record.status === "approved";
+    return (
+      <div className="panel p-6 text-center">
+        <p className="text-muted mb-3">
+          {canCreateInvoice ? "This quotation is ready to be converted into an invoice." : "Print the quotation before creating an invoice."}
+        </p>
+        {canCreateInvoice ? (
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => {
+              const invoiceNo = dispatch(commitNextNumber(record.service, "invoice"));
+              dispatch(
+                patchRecord({
+                  id: record.id,
+                  patch: {
+                    invoiceNo,
+                    invoiceDate: localDateInput(),
+                    invoiceCreated: true,
+                    status: "invoiced",
+                  },
+                })
+              );
+            }}
+          >
+            Create invoice
+          </button>
+        ) : (
+          <Link href={`/record/${record.id}/quotation`} className="btn-outline">
+            View quotation
+          </Link>
+        )}
+      </div>
+    );
   }
 
   const totals = computeTotals(record);

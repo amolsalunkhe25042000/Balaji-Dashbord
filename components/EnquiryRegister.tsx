@@ -10,12 +10,12 @@ export default function EnquiryRegister({ records }: { records: JobRecord[] }) {
   );
 
   return (
-    <section className="panel">
+    <section className="panel" aria-label="Customer visits and approval queue">
       <div className="panel-head flex-wrap gap-2">
         <div>
-          <h2>Customer enquiries</h2>
+          <h2>Customer visits &amp; approval queue</h2>
           <p className="mt-1 text-xs font-normal normal-case tracking-normal text-muted">
-            Saved requests waiting for customer approval. They are not quotations or invoices yet.
+            New visits, quotations waiting for approval, and rejected requests stay out of the approved work pipeline.
           </p>
         </div>
         <span className="rounded-full bg-water/10 px-2.5 py-1 text-xs font-bold text-water">
@@ -70,7 +70,7 @@ export default function EnquiryRegister({ records }: { records: JobRecord[] }) {
                   <td className="px-4 py-3 text-xs text-muted">{formatDate(record.createdAt.slice(0, 10))}</td>
                   <td className="px-4 py-3">
                     <Link href={`/record/${record.id}/quotation`} className="text-xs font-semibold text-water hover:underline">
-                      Open enquiry
+                      {record.status === "enquiry" ? "Send quotation" : record.status === "request_closed" ? "Review request" : "View quotation"}
                     </Link>
                   </td>
                 </tr>

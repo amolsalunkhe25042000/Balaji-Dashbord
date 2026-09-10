@@ -3,6 +3,7 @@ import { JobStatus } from "@/lib/types";
 const STATUS_META: Record<JobStatus, { label: string; className: string }> = {
   enquiry: { label: "Enquiry", className: "bg-slate-400" },
   quotation_sent: { label: "Quotation sent", className: "bg-blue-500" },
+  approved: { label: "Approved", className: "bg-cyan-600" },
   invoiced: { label: "Pending", className: "bg-amber-500" },
   partially_paid: { label: "Partially paid", className: "bg-orange-500" },
   paid: { label: "Paid", className: "bg-emerald-600" },

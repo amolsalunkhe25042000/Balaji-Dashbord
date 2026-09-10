@@ -1,13 +1,13 @@
-import { createSlice, PayloadAction, ThunkAction, AnyAction } from "@reduxjs/toolkit";
-import { JobRecord, JobStatus, LineItem, Payment, ServiceKey } from "./types";
+import { createSelector, createSlice, PayloadAction, ThunkAction, AnyAction } from "@reduxjs/toolkit";
+import { Expense, JobRecord, JobStatus, LineItem, Payment, ServiceKey } from "./types";
 import { SERVICES } from "./services";
-import { newId } from "./money";
+import { computeTotals, localDateInput, newId } from "./money";
 import { counterKey, dateStamp } from "./numbering";
 import type { RootState } from "./store";
 
 type AppThunk<ReturnType = void> = ThunkAction<ReturnType, RootState, unknown, AnyAction>;
 
-interface RecordsState {
+export interface RecordsState {
   byId: Record<string, JobRecord>;
   allIds: string[];
   counters: Record<string, number>; // key: `${prefix}${stamp}` -> last used sequence
@@ -21,7 +21,7 @@ const initialState: RecordsState = {
 
 export function makeBlankRecord(service: ServiceKey): JobRecord {
   const svc = SERVICES[service];
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateInput();
   const now = new Date().toISOString();
   return {
     id: newId("job"),
@@ -41,6 +41,7 @@ export function makeBlankRecord(service: ServiceKey): JobRecord {
     invoiceDate: today,
     invoiceCreated: false,
     payments: [],
+    expenses: [],
     warranty: svc.defaultWarranty,
     paymentTerms: svc.defaultPaymentTerms,
     terms: svc.defaultTerms.join("\n"),
@@ -72,6 +73,8 @@ const recordsSlice = createSlice({
     addPayment(state, action: PayloadAction<{ id: string; payment: Payment }>) {
       const rec = state.byId[action.payload.id];
       if (!rec) return;
+      const amount = Number(action.payload.payment.amount);
+      if (!Number.isFinite(amount) || amount <= 0 || amount > computeTotals(rec).balanceDue) return;
       rec.payments.push(action.payload.payment);
       rec.updatedAt = new Date().toISOString();
     },
@@ -79,6 +82,30 @@ const recordsSlice = createSlice({
       const rec = state.byId[action.payload.id];
       if (!rec) return;
       rec.payments = rec.payments.filter((p) => p.id !== action.payload.paymentId);
+      rec.updatedAt = new Date().toISOString();
+    },
+    addExpense(state, action: PayloadAction<{ id: string; expense: Expense }>) {
+      const rec = state.byId[action.payload.id];
+      if (!rec) return;
+      const amount = Number(action.payload.expense.amount);
+      if (!Number.isFinite(amount) || amount <= 0) return;
+      rec.expenses.push({ ...action.payload.expense, amount });
+      rec.updatedAt = new Date().toISOString();
+    },
+    updateExpense(state, action: PayloadAction<{ id: string; expense: Expense }>) {
+      const rec = state.byId[action.payload.id];
+      if (!rec) return;
+      const amount = Number(action.payload.expense.amount);
+      if (!Number.isFinite(amount) || amount <= 0 || !action.payload.expense.description.trim()) return;
+      const index = rec.expenses.findIndex((expense) => expense.id === action.payload.expense.id);
+      if (index < 0) return;
+      rec.expenses[index] = { ...action.payload.expense, amount, description: action.payload.expense.description.trim() };
+      rec.updatedAt = new Date().toISOString();
+    },
+    removeExpense(state, action: PayloadAction<{ id: string; expenseId: string }>) {
+      const rec = state.byId[action.payload.id];
+      if (!rec) return;
+      rec.expenses = rec.expenses.filter((expense) => expense.id !== action.payload.expenseId);
       rec.updatedAt = new Date().toISOString();
     },
     setStatus(state, action: PayloadAction<{ id: string; status: JobStatus }>) {
@@ -107,6 +134,9 @@ export const {
   setItems,
   addPayment,
   removePayment,
+  addExpense,
+  updateExpense,
+  removeExpense,
   setStatus,
   deleteRecord,
   hydrate,
@@ -141,8 +171,10 @@ export function commitNextNumber(service: ServiceKey, docType: "invoice" | "quot
 }
 
 // ---- Selectors ----
-export const selectAllRecords = (state: RootState): JobRecord[] =>
-  state.records.allIds.map((id) => state.records.byId[id]);
+export const selectAllRecords = createSelector(
+  [(state: RootState) => state.records.allIds, (state: RootState) => state.records.byId],
+  (allIds, byId): JobRecord[] => allIds.map((id) => byId[id]).filter(Boolean)
+);
 
 export const selectRecordById = (state: RootState, id: string): JobRecord | undefined =>
   state.records.byId[id];

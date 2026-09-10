@@ -1,12 +1,13 @@
 import { ServiceKey } from "./types";
 import { SERVICES } from "./services";
+import { localDateInput } from "./money";
 
 function pad2(n: number): string {
   return String(n).padStart(2, "0");
 }
 
 export function dateStamp(d: Date = new Date()): string {
-  return `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`;
+  return localDateInput(d).replaceAll("-", "");
 }
 
 // e.g. waterproofing + invoice -> "WI", painting + quotation -> "PQ"

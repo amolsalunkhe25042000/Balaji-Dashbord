@@ -22,15 +22,26 @@ const headers = [
   "Complete Record JSON",
 ];
 
+function envValue(name: string) {
+  const value = process.env[name]?.trim() || "";
+  return value.replace(/^(["'])(.*)\1$/, "$2");
+}
+
+function spreadsheetIdValue() {
+  const configured = envValue("GOOGLE_SHEETS_SPREADSHEET_ID");
+  const match = configured.match(/\/spreadsheets\/d\/([^/]+)/);
+  return match ? match[1] : configured;
+}
+
 function getSheetsClient() {
-  const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const privateKey = process.env.GOOGLE_PRIVATE_KEY;
+  const clientEmail = envValue("GOOGLE_SERVICE_ACCOUNT_EMAIL");
+  const privateKey = envValue("GOOGLE_PRIVATE_KEY").replace(/\\n/g, "\n");
   if (!clientEmail || !privateKey) return null;
 
   const auth = new google.auth.GoogleAuth({
     credentials: {
       client_email: clientEmail,
-      private_key: privateKey.replace(/\\n/g, "\n"),
+      private_key: privateKey,
     },
     scopes: ["https://www.googleapis.com/auth/spreadsheets"],
   });
@@ -57,9 +68,15 @@ function rowForRecord(record: JobRecord) {
   ];
 }
 
+export async function GET() {
+  const spreadsheetId = spreadsheetIdValue();
+  const configured = Boolean(spreadsheetId && getSheetsClient());
+  return NextResponse.json({ configured, range: envValue("GOOGLE_SHEETS_RANGE") || "Records!A:N" });
+}
+
 export async function POST(request: Request) {
-  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
-  const range = process.env.GOOGLE_SHEETS_RANGE || "Records!A:N";
+  const spreadsheetId = spreadsheetIdValue();
+  const range = envValue("GOOGLE_SHEETS_RANGE") || "Records!A:N";
   const sheets = getSheetsClient();
 
   if (!spreadsheetId || !sheets) {

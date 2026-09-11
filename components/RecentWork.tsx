@@ -2,58 +2,18 @@ import Link from "next/link";
 import { JobRecord } from "@/lib/types";
 import { SERVICES } from "@/lib/services";
 import { computeTotals, fmtMoney, formatDate } from "@/lib/money";
+import { summarizeFinances } from "@/lib/financial";
 import StatusBadge from "./StatusBadge";
 
 export default function RecentWork({ records }: { records: JobRecord[] }) {
   const recent = [...records]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-    .slice(0, 4);
-
-  if (recent.length === 0) {
-    return (
-      <div className="panel">
-        <div className="panel-head">
-          <h2>Recent work</h2>
-        </div>
-        <div className="panel-body">
-          <p className="text-sm text-muted">No jobs yet. Create your first enquiry or quotation to see it here.</p>
-        </div>
-      </div>
-    );
-  }
+    .slice(0, 6);
 
   return (
-    <div className="panel">
-      <div className="panel-head">
-        <h2>Recent work</h2>
-      </div>
-      <div className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {recent.map((r) => {
-          const svc = SERVICES[r.service];
-          const totals = computeTotals(r);
-          const href = r.invoiceCreated ? `/record/${r.id}/invoice` : `/record/${r.id}/quotation`;
-          return (
-            <Link
-              key={r.id}
-              href={href}
-              className="rounded-lg border border-line p-3 flex flex-col gap-1.5 hover:shadow-md transition bg-white"
-            >
-              <div className="flex items-center justify-between">
-                <span
-                  className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded"
-                  style={{ backgroundColor: `${svc.accentHex}22`, color: svc.accentHex }}
-                >
-                  {svc.label}
-                </span>
-                <StatusBadge status={r.status} />
-              </div>
-              <div className="font-semibold text-sm truncate">{r.customer.name || "Unnamed customer"}</div>
-              <div className="text-xs text-muted">{formatDate(r.updatedAt.slice(0, 10))}</div>
-              <div className="text-sm font-mono font-semibold text-deep">₹ {fmtMoney(totals.total)}</div>
-            </Link>
-          );
-        })}
-      </div>
-    </div>
+    <section className="panel overflow-hidden">
+      <div className="panel-head"><div><h2>Recent jobs</h2><p className="mt-1 text-[11px] normal-case tracking-normal text-muted">The latest jobs and their current financial position.</p></div></div>
+      {recent.length ? <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-xs"><thead><tr className="border-b border-line text-left uppercase tracking-wide text-muted"><th className="px-3 py-3">Customer / job</th><th className="px-3 py-3">Status</th><th className="px-3 py-3 text-right">Invoice</th><th className="px-3 py-3 text-right">Paid</th><th className="px-3 py-3 text-right">Outstanding</th><th className="px-3 py-3 text-right">Profit</th><th className="px-3 py-3 text-right">Updated</th></tr></thead><tbody>{recent.map((record) => { const totals = computeTotals(record); const profit = summarizeFinances([record]).grossProfit; const href = record.invoiceCreated ? `/record/${record.id}/invoice` : `/record/${record.id}/quotation`; return <tr key={record.id} className="border-b border-panel hover:bg-panel"><td className="px-3 py-3"><Link href={href} className="font-semibold text-deep hover:underline">{record.customer.name || "Unnamed customer"}</Link><span className="block text-[11px] text-muted">{SERVICES[record.service].label}</span></td><td className="px-3 py-3"><StatusBadge status={record.status} /></td><td className="px-3 py-3 text-right font-mono">{record.invoiceCreated ? `₹${fmtMoney(totals.total)}` : "—"}</td><td className="px-3 py-3 text-right font-mono text-water">{record.invoiceCreated ? `₹${fmtMoney(totals.paidAmount)}` : "—"}</td><td className="px-3 py-3 text-right font-mono text-paint">{record.invoiceCreated ? `₹${fmtMoney(totals.balanceDue)}` : "—"}</td><td className={`px-3 py-3 text-right font-mono ${profit >= 0 ? "text-emerald-700" : "text-red-700"}`}>{record.invoiceCreated ? `₹${fmtMoney(profit)}` : "—"}</td><td className="px-3 py-3 text-right text-muted">{formatDate(record.updatedAt.slice(0, 10))}</td></tr>; })}</tbody></table></div> : <div className="panel-body"><p className="text-sm text-muted">No jobs yet. Create your first enquiry or quotation to see it here.</p></div>}
+    </section>
   );
 }

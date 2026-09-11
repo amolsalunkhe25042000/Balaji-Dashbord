@@ -1,12 +1,13 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
-import { deleteRecord, selectAllRecords } from "@/lib/recordsSlice";
+import { deleteRecord, hydrate, selectAllRecords } from "@/lib/recordsSlice";
 import { ALL_JOB_STATUSES, DASHBOARD_WIDGETS, DEFAULT_SETTINGS, DashboardWidget, MANAGEMENT_PANELS, ManagementPanel, OPERATIONS_COLUMNS, OperationsColumn, updateSettings, resetSettings } from "@/lib/settingsSlice";
-import { saveStoredSettings } from "@/lib/store";
+import { saveStoredSettings, syncRecordsToGoogleSheets } from "@/lib/store";
 import ProtectedPage from "@/components/ProtectedPage";
+import { backupSummary, createBackup, parseBackup } from "@/lib/backup";
 
 const WIDGET_LABELS: Record<DashboardWidget, string> = {
   totalJobs: "Total jobs",
@@ -50,6 +51,7 @@ export default function SettingsPage() {
   const dispatch = useAppDispatch();
   const savedSettings = useAppSelector((state) => state.settings);
   const records = useAppSelector(selectAllRecords);
+  const recordsState = useAppSelector((state) => state.records);
   const [brandingName, setBrandingName] = useState(savedSettings.brandingName);
   const [dashboardWidgets, setDashboardWidgets] = useState<DashboardWidget[]>(savedSettings.dashboardWidgets);
   const [managementPanels, setManagementPanels] = useState<ManagementPanel[]>(savedSettings.managementPanels);
@@ -57,6 +59,9 @@ export default function SettingsPage() {
   const [visibleStatuses, setVisibleStatuses] = useState(savedSettings.visibleStatuses);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [saved, setSaved] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "success" | "failed">("idle");
+  const [lastSync, setLastSync] = useState("");
+  const [backupMessage, setBackupMessage] = useState("");
 
   useEffect(() => {
     setBrandingName(savedSettings.brandingName);
@@ -68,6 +73,42 @@ export default function SettingsPage() {
 
   function toggleWidget(widget: DashboardWidget) {
     setDashboardWidgets((current) => current.includes(widget) ? current.filter((item) => item !== widget) : [...current, widget]);
+  }
+
+  function downloadBackup() {
+    const backup = createBackup(recordsState, savedSettings);
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Balaji_CRM_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setBackupMessage("Backup downloaded.");
+  }
+
+  async function importBackup(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      const parsed = parseBackup(JSON.parse(await file.text()));
+      if (!parsed) { setBackupMessage("This file is not a valid Balaji CRM backup."); return; }
+      if (!window.confirm(`Import backup? This will replace current jobs and settings with ${backupSummary(parsed)}.`)) return;
+      dispatch(hydrate(parsed.records));
+      dispatch(updateSettings(parsed.settings));
+      saveStoredSettings(parsed.settings);
+      setBackupMessage("Backup imported successfully.");
+    } catch {
+      setBackupMessage("The backup file could not be read.");
+    }
+  }
+
+  async function syncNow() {
+    setSyncStatus("syncing");
+    const success = await syncRecordsToGoogleSheets(recordsState);
+    setSyncStatus(success ? "success" : "failed");
+    if (success) setLastSync(new Date().toLocaleString("en-IN"));
   }
 
   function toggleSetting<T extends string>(value: T, setter: React.Dispatch<React.SetStateAction<T[]>>) {
@@ -158,6 +199,14 @@ export default function SettingsPage() {
           <button type="button" className="btn-outline" onClick={restoreDefaults}>Reset settings</button>
         </div>
       </form>
+
+      <section className="panel p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div><h2 className="font-display text-lg font-bold text-deep">Data safety and synchronization</h2><p className="mt-1 text-xs text-muted">Back up local data before importing. Google credentials remain on the server.</p></div>
+          <div className="flex flex-wrap gap-2"><button type="button" className="btn-outline text-xs" onClick={downloadBackup}>Download backup</button><label className="btn-outline text-xs cursor-pointer">Import backup<input type="file" accept="application/json,.json" className="hidden" onChange={importBackup} /></label><button type="button" className="btn-primary text-xs" onClick={syncNow} disabled={syncStatus === "syncing"}>{syncStatus === "syncing" ? "Syncing..." : "Sync Now"}</button></div>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted"><span>Sync: {syncStatus === "success" ? "Completed" : syncStatus === "failed" ? "Failed" : syncStatus === "syncing" ? "In progress" : "Ready"}</span>{lastSync && <span>Last successful sync: {lastSync}</span>}{backupMessage && <span className="font-semibold text-deep">{backupMessage}</span>}</div>
+      </section>
 
       <section className="panel p-4">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-4">

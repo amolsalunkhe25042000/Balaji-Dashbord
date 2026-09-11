@@ -10,7 +10,9 @@ import { computeTotals, fmtMoney, formatDate } from "@/lib/money";
 import { setStatus } from "@/lib/recordsSlice";
 import StatusBadge from "./StatusBadge";
 
-const FILTERS: { key: "all" | JobStatus; label: string }[] = [
+type CustomerTableFilter = "all" | JobStatus;
+
+const FILTERS: { key: CustomerTableFilter; label: string }[] = [
   { key: "all", label: "All" },
   { key: "enquiry", label: "Enquiry" },
   { key: "quotation_sent", label: "Quotation sent" },
@@ -25,7 +27,7 @@ const FILTERS: { key: "all" | JobStatus; label: string }[] = [
 export default function CustomerTable({ records }: { records: JobRecord[] }) {
   const dispatch = useAppDispatch();
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<"all" | JobStatus>("all");
+  const [filter, setFilter] = useState<CustomerTableFilter>("all");
   const [dateFilter, setDateFilter] = useState("");
 
   const filtered = useMemo(() => {
@@ -120,7 +122,7 @@ export default function CustomerTable({ records }: { records: JobRecord[] }) {
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
           />
-          <select className="field-input !w-auto text-sm" value={filter} onChange={(e) => setFilter(e.target.value as any)}>
+          <select className="field-input !w-auto text-sm" value={filter} onChange={(e) => setFilter(e.target.value as CustomerTableFilter)}>
             {FILTERS.map((f) => (
               <option key={f.key} value={f.key}>
                 {f.label}

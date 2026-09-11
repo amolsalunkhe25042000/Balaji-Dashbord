@@ -9,13 +9,14 @@ import { isInvoiceRecord } from "@/lib/money";
 
 const READ_KEY = "balaji_crm_read_notifications_v1";
 
-function Icon({ name }: { name: "home" | "plus" | "visits" | "check" | "chart" | "bell" | "settings" | "help" | "menu" | "close" }) {
+function Icon({ name }: { name: "home" | "plus" | "visits" | "check" | "chart" | "reports" | "bell" | "settings" | "help" | "menu" | "close" }) {
   const paths = {
     home: <><path d="m3 10 9-7 9 7" /><path d="M5 9v11h14V9" /><path d="M9 20v-6h6v6" /></>,
     plus: <><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M12 8v6M9 11h6" /></>,
     visits: <><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M8 8h8M8 12h5M8 16h3" /></>,
     check: <><path d="m5 12 4 4L19 6" /><path d="M4 4h16v16H4z" /></>,
     chart: <><path d="M4 19V5M4 19h16" /><path d="m7 15 3-4 3 2 5-7" /></>,
+    reports: <><path d="M5 4h14v16H5z" /><path d="M8 8h8M8 12h5M8 16h6" /></>,
     bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M10 21h4" /></>,
     settings: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.8 1.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-2.6V20a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1-1.8-1.8.1-.1A1.7 1.7 0 0 0 8 15a1.7 1.7 0 0 0-1.6-1H6v-2.6h.4A1.7 1.7 0 0 0 8 10a1.7 1.7 0 0 0-.3-1.9l-.1-.1 1.8-1.8.1.1A1.7 1.7 0 0 0 11.4 6a1.7 1.7 0 0 0 1-1.6V4h2.6v.4a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1 1.8 1.8-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.4V13h-.4a1.7 1.7 0 0 0-1.6 1Z" /></>,
     help: <><circle cx="12" cy="12" r="9" /><path d="M9.7 9a2.4 2.4 0 1 1 4.1 1.7c-1 .8-1.8 1.2-1.8 2.8M12 17h.01" /></>,
@@ -79,7 +80,7 @@ export default function TopNav() {
   }
 
   const navLinks = [
-    ["/", "Dashboard", "home"], ["/new", "New job", "plus"], ["/visits", "Customer visits", "visits"], ["/approved", "Approved jobs", "check"], ["/owner", "Owner finance", "chart"],
+    ["/", "Dashboard", "home"], ["/new", "New job", "plus"], ["/visits", "Customer visits", "visits"], ["/approved", "Approved jobs", "check"], ["/owner", "Owner finance", "chart"], ["/reports", "Reports", "reports"],
   ] as const;
 
   return (

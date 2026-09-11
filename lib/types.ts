@@ -33,7 +33,7 @@ export interface Payment {
   note?: string;
 }
 
-export type ExpenseCategory = "labor" | "material" | "transport" | "other";
+export type ExpenseCategory = "labor" | "material" | "transport" | "equipment" | "subcontractor" | "food_travel" | "other";
 
 export interface Expense {
   id: string;
@@ -41,7 +41,22 @@ export interface Expense {
   description: string;
   amount: number;
   date: string;
+  vendor?: string;
+  paymentMethod?: string;
+  notes?: string;
   note?: string;
+  jobId?: string;
+}
+
+export interface BusinessExpense {
+  id: string;
+  category: string;
+  description: string;
+  amount: number;
+  date: string;
+  vendor?: string;
+  paymentMethod?: string;
+  notes?: string;
 }
 
 export interface CompanyInfo {

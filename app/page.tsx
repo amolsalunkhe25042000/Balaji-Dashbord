@@ -11,6 +11,8 @@ import StatCard from "@/components/StatCard";
 import RecentWork from "@/components/RecentWork";
 import ManagementDashboard from "@/components/ManagementDashboard";
 
+type QuickFilter = "all" | "active" | "pending_approval" | "completed";
+
 export default function DashboardPage() {
   const records = useAppSelector(selectAllRecords);
   const dashboardWidgets = useAppSelector((state) => state.settings.dashboardWidgets);
@@ -22,19 +24,50 @@ export default function DashboardPage() {
   const financialSummary = useAppSelector(selectFinancialSummary);
   const [activeStatus, setActiveStatus] = useState<"all" | JobStatus>("all");
   const [activeService, setActiveService] = useState<"all" | ServiceKey>("all");
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
+
+  const handleQuickFilter = (next: QuickFilter) => {
+    setQuickFilter(next);
+    if (next === "all") {
+      setActiveStatus("all");
+      return;
+    }
+    if (next === "active") {
+      setActiveStatus("all");
+      return;
+    }
+    if (next === "pending_approval") {
+      setActiveStatus("quotation_sent");
+      return;
+    }
+    setActiveStatus("closed");
+  };
 
   const totalJobs = records.length;
   const activeJobs = records.filter((r) => !["closed", "request_closed"].includes(r.status)).length;
   const closed = records.filter((r) => r.status === "closed").length;
   const pendingApproval = records.filter((r) => r.status === "quotation_sent").length;
+
+  const filteredRecords = useMemo(() => {
+    let nextRecords = records;
+
+    if (quickFilter === "active") {
+      nextRecords = nextRecords.filter((record) => !["closed", "request_closed"].includes(record.status));
+    } else if (quickFilter === "pending_approval") {
+      nextRecords = nextRecords.filter((record) => record.status === "quotation_sent");
+    } else if (quickFilter === "completed") {
+      nextRecords = nextRecords.filter((record) => record.status === "closed");
+    }
+
+    return nextRecords.filter((record) =>
+      (activeStatus === "all" || record.status === activeStatus) &&
+      (activeService === "all" || record.service === activeService)
+    );
+  }, [records, activeService, activeStatus, quickFilter]);
+
   const visibleRecords = useMemo(
-    () =>
-      records.filter(isApprovedWork).filter(
-        (record) =>
-          (activeStatus === "all" || record.status === activeStatus) &&
-          (activeService === "all" || record.service === activeService)
-      ),
-    [records, activeService, activeStatus]
+    () => filteredRecords.filter(isApprovedWork),
+    [filteredRecords]
   );
 
   return (
@@ -76,10 +109,10 @@ export default function DashboardPage() {
       <section className="flex flex-col gap-3" aria-label="Key performance indicators">
         <div><h2 className="font-display text-lg font-bold text-deep">Jobs</h2><p className="text-xs text-muted">Work that needs attention and work completed.</p></div>
         <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3 md:grid-cols-4">
-          <StatCard label="Total jobs" value={String(totalJobs)} />
-          <StatCard label="Active jobs" value={String(activeJobs)} tone="warn" />
-          <StatCard label="Pending approval" value={String(pendingApproval)} tone="warn" sub="Quotation sent" />
-          <StatCard label="Completed jobs" value={String(closed)} tone="good" />
+          <StatCard label="Total jobs" value={String(totalJobs)} active={quickFilter === "all"} onClick={() => handleQuickFilter("all")} />
+          <StatCard label="Active jobs" value={String(activeJobs)} tone="warn" active={quickFilter === "active"} onClick={() => handleQuickFilter("active")} />
+          <StatCard label="Pending approval" value={String(pendingApproval)} tone="warn" sub="Quotation sent" active={quickFilter === "pending_approval"} onClick={() => handleQuickFilter("pending_approval")} />
+          <StatCard label="Completed jobs" value={String(closed)} tone="good" active={quickFilter === "completed"} onClick={() => handleQuickFilter("completed")} />
         </div>
         <div><h2 className="font-display text-lg font-bold text-deep">Finance</h2><p className="text-xs text-muted">Invoice value, cash received, and money still due.</p></div>
         <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3 md:grid-cols-3">
@@ -97,7 +130,7 @@ export default function DashboardPage() {
       </section>
 
       {dashboardWidgets.includes("managementDashboard") && <ManagementDashboard
-        records={records}
+        records={filteredRecords}
         businessExpenses={businessExpenses}
         financialSummary={financialSummary}
         activeStatus={activeStatus}

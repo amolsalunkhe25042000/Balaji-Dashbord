@@ -1,7 +1,130 @@
 import { configureStore } from "@reduxjs/toolkit";
 import recordsReducer, { RecordsState } from "./recordsSlice";
 import settingsReducer, { ALL_JOB_STATUSES, DEFAULT_SETTINGS, MANAGEMENT_PANELS, OPERATIONS_COLUMNS, SettingsState } from "./settingsSlice";
-import { BusinessExpense, Expense } from "./types";
+import { BusinessExpense, Expense, JobRecord, JobStatus, LineItem, Payment, ServiceKey } from "./types";
+
+const VALID_SERVICES = new Set<ServiceKey>(["painting", "waterproofing"]);
+
+function toNumber(value: unknown, fallback = 0): number {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+function toString(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value : fallback;
+}
+
+function sanitizeRecord(raw: unknown): JobRecord | null {
+  if (!raw || typeof raw !== "object") return null;
+  const record = raw as Record<string, unknown>;
+  const id = toString(record.id);
+  if (!id) return null;
+
+  const service = typeof record.service === "string" && VALID_SERVICES.has(record.service as ServiceKey)
+    ? (record.service as ServiceKey)
+    : "painting";
+  const status = typeof record.status === "string" && ALL_JOB_STATUSES.includes(record.status as JobStatus)
+    ? (record.status as JobStatus)
+    : "enquiry";
+
+  const customerObject = record.customer && typeof record.customer === "object" ? (record.customer as Record<string, unknown>) : {};
+  const companyObject = record.company && typeof record.company === "object" ? (record.company as Record<string, unknown>) : {};
+
+  const customer = {
+    name: toString(customerObject.name),
+    address: toString(customerObject.address),
+    contact: toString(customerObject.contact),
+    site: toString(customerObject.site),
+  };
+
+  const company = {
+    name: toString(companyObject.name),
+    tagline: toString(companyObject.tagline),
+    address: toString(companyObject.address),
+    phone1: toString(companyObject.phone1),
+    phone2: toString(companyObject.phone2),
+    email: toString(companyObject.email),
+    website: toString(companyObject.website),
+    gstin: toString(companyObject.gstin),
+  };
+
+  const items: LineItem[] = Array.isArray(record.items)
+    ? record.items.flatMap((item) => {
+        if (!item || typeof item !== "object") return [];
+        const entry = item as Record<string, unknown>;
+        return [{
+          id: toString(entry.id) || `item-${Math.random().toString(36).slice(2, 8)}`,
+          description: toString(entry.description),
+          unit: toString(entry.unit),
+          qty: typeof entry.qty === "number" ? entry.qty : (typeof entry.qty === "string" && entry.qty.trim() ? Number(entry.qty) || "" : ""),
+          rate: typeof entry.rate === "number" ? entry.rate : (typeof entry.rate === "string" && entry.rate.trim() ? Number(entry.rate) || "" : ""),
+        }];
+      })
+    : [];
+
+  const payments: Payment[] = Array.isArray(record.payments)
+    ? record.payments.flatMap((payment) => {
+        if (!payment || typeof payment !== "object") return [];
+        const entry = payment as Record<string, unknown>;
+        const amount = toNumber(entry.amount, 0);
+        if (!entry.id || amount <= 0) return [];
+        return [{
+          id: toString(entry.id),
+          amount,
+          mode: toString(entry.mode),
+          date: toString(entry.date),
+          note: typeof entry.note === "string" ? entry.note : undefined,
+        }];
+      })
+    : [];
+
+  const expenses: Expense[] = Array.isArray(record.expenses)
+    ? record.expenses.flatMap((expense) => {
+        if (!expense || typeof expense !== "object") return [];
+        const entry = expense as Record<string, unknown>;
+        const amount = toNumber(entry.amount, 0);
+        if (!entry.id || amount <= 0) return [];
+        return [{
+          id: toString(entry.id),
+          category: (typeof entry.category === "string" ? entry.category : "other") as Expense["category"],
+          description: toString(entry.description),
+          amount,
+          date: toString(entry.date),
+          vendor: typeof entry.vendor === "string" ? entry.vendor : undefined,
+          paymentMethod: typeof entry.paymentMethod === "string" ? entry.paymentMethod : undefined,
+          notes: typeof entry.notes === "string" ? entry.notes : (typeof entry.note === "string" ? entry.note : undefined),
+          note: typeof entry.note === "string" ? entry.note : undefined,
+          jobId: typeof entry.jobId === "string" ? entry.jobId : id,
+        }];
+      })
+    : [];
+
+  return {
+    id,
+    service,
+    status,
+    company,
+    customer,
+    items,
+    discountPercent: toNumber(record.discountPercent, 0),
+    gstEnabled: Boolean(record.gstEnabled),
+    gstPercent: toNumber(record.gstPercent, 18),
+    quotationNo: toString(record.quotationNo),
+    quotationDate: toString(record.quotationDate),
+    validityDays: Math.max(0, Math.round(toNumber(record.validityDays, 15))),
+    quotationPrinted: Boolean(record.quotationPrinted),
+    invoiceNo: toString(record.invoiceNo),
+    invoiceDate: toString(record.invoiceDate),
+    invoiceCreated: Boolean(record.invoiceCreated),
+    payments,
+    expenses,
+    warranty: toString(record.warranty),
+    paymentTerms: toString(record.paymentTerms),
+    terms: toString(record.terms),
+    createdAt: toString(record.createdAt) || new Date().toISOString(),
+    updatedAt: toString(record.updatedAt) || new Date().toISOString(),
+  };
+}
 
 export const STORAGE_KEY = "balaji_crm_state_v1";
 export const SETTINGS_STORAGE_KEY = "balaji_crm_settings_v1";
@@ -33,42 +156,41 @@ export function loadStoredRecords() {
     if (!raw) return undefined;
     const parsed = JSON.parse(raw) as Partial<RecordsState>;
 
-    if (
-      !parsed ||
-      typeof parsed !== "object" ||
-      !parsed.byId ||
-      typeof parsed.byId !== "object" ||
-      !Array.isArray(parsed.allIds) ||
-      !parsed.counters ||
-      typeof parsed.counters !== "object"
-    ) {
+    if (!parsed || typeof parsed !== "object" || !parsed.byId || typeof parsed.byId !== "object" || !Array.isArray(parsed.allIds) || !parsed.counters || typeof parsed.counters !== "object") {
       return undefined;
     }
-    const records = parsed as RecordsState;
-    if (!Array.isArray(records.businessExpenses)) records.businessExpenses = [];
-    records.businessExpenses = records.businessExpenses
-      .filter((expense): expense is BusinessExpense => Boolean(expense && typeof expense === "object" && typeof expense.id === "string"))
-      .map((expense) => ({
-        ...expense,
-        amount: Number(expense.amount) || 0,
-        description: typeof expense.description === "string" ? expense.description : "",
-        date: typeof expense.date === "string" ? expense.date : "",
-      }));
-    Object.values(records.byId).forEach((record) => {
-      if (!Array.isArray(record.expenses)) record.expenses = [];
-      record.expenses = record.expenses
-        .filter((expense): expense is Expense => Boolean(expense && typeof expense === "object" && typeof expense.id === "string"))
-        .map((expense) => ({
-          ...expense,
-          jobId: expense.jobId || record.id,
-          amount: Number(expense.amount) || 0,
-          description: typeof expense.description === "string" ? expense.description : "",
-          date: typeof expense.date === "string" ? expense.date : "",
-          notes: expense.notes ?? expense.note,
-        }));
-      if (!Array.isArray(record.payments)) record.payments = [];
-    });
-    return records;
+
+    const byId = Object.entries(parsed.byId).reduce<Record<string, JobRecord>>((acc, [id, value]) => {
+      const sanitized = sanitizeRecord(value);
+      if (sanitized && id === sanitized.id) acc[id] = sanitized;
+      return acc;
+    }, {});
+
+    const records: RecordsState = {
+      byId,
+      allIds: parsed.allIds.filter((id) => typeof id === "string" && byId[id]).map(String),
+      counters: Object.fromEntries(Object.entries(parsed.counters).filter(([key, value]) => typeof key === "string" && typeof value === "number" && Number.isFinite(value))),
+      businessExpenses: Array.isArray(parsed.businessExpenses)
+        ? parsed.businessExpenses.flatMap((expense) => {
+            if (!expense || typeof expense !== "object") return [];
+            const entry = expense as unknown as Record<string, unknown>;
+            const amount = toNumber(entry.amount, 0);
+            if (!entry.id || amount <= 0) return [];
+            return [{
+              id: toString(entry.id),
+              category: toString(entry.category),
+              description: toString(entry.description),
+              amount,
+              date: toString(entry.date),
+              vendor: typeof entry.vendor === "string" ? entry.vendor : undefined,
+              paymentMethod: typeof entry.paymentMethod === "string" ? entry.paymentMethod : undefined,
+              notes: typeof entry.notes === "string" ? entry.notes : undefined,
+            }];
+          })
+        : [],
+    };
+
+    return records.allIds.length ? records : undefined;
   } catch {
     return undefined;
   }

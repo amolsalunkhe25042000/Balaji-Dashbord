@@ -2,9 +2,9 @@
 
 import { FormEvent, ReactNode, useEffect, useState } from "react";
 
-const PASSWORD_SUFFIX = "992125";
 const MAX_ATTEMPTS = 5;
 const LOCK_DURATION_MS = 30 * 60 * 1000;
+const OWNER_PASSWORD = (process.env.NEXT_PUBLIC_ACCESS_PASSWORD ?? "").trim();
 
 interface AccessState {
   failedAttempts: number;
@@ -20,7 +20,7 @@ function lockStorageKey(date = new Date()) {
 }
 
 function dailyPassword(date = new Date()) {
-  return `${String(date.getDate()).padStart(2, "0")}${PASSWORD_SUFFIX}`;
+  return `${String(date.getDate()).padStart(2, "0")}${OWNER_PASSWORD}`;
 }
 
 export default function ProtectedPage({ title, description, children }: { title: string; description: string; children: ReactNode }) {
@@ -71,6 +71,11 @@ export default function ProtectedPage({ title, description, children }: { title:
   function unlock(event: FormEvent) {
     event.preventDefault();
     if (lockedUntil > Date.now()) return;
+    if (!OWNER_PASSWORD) {
+      setError("Owner access is not configured. Set NEXT_PUBLIC_ACCESS_PASSWORD in your environment.");
+      setPassword("");
+      return;
+    }
     if (password === dailyPassword()) {
       setUnlocked(true);
       setFailedAttempts(0);

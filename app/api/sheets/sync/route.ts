@@ -12,6 +12,7 @@ const headers = [
   "Status",
   "Customer",
   "Contact",
+  "Site / billing address",
   "Quotation No",
   "Quotation Date",
   "Invoice No",
@@ -19,6 +20,8 @@ const headers = [
   "Total",
   "Paid",
   "Balance",
+  "Job Expenses",
+  "Profit",
   "Updated At",
   "Complete Record JSON",
 ];
@@ -61,12 +64,14 @@ function getSheetsClient() {
 
 function rowForRecord(record: JobRecord) {
   const totals = computeTotals(record);
+  const jobExpenses = (record.expenses || []).reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0);
   return [
     record.id,
     record.service,
     record.status,
     record.customer.name,
     record.customer.contact,
+    record.customer.address,
     record.quotationNo,
     record.quotationDate,
     record.invoiceNo,
@@ -74,6 +79,8 @@ function rowForRecord(record: JobRecord) {
     totals.total,
     totals.paidAmount,
     totals.balanceDue,
+    jobExpenses,
+    totals.total - jobExpenses,
     record.updatedAt,
     JSON.stringify(record),
   ];
@@ -105,6 +112,17 @@ async function ensureSheet(sheets: ReturnType<typeof google.sheets>, spreadsheet
   await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests: [{ addSheet: { properties: { title } } }] } });
 }
 
+function columnLetterForIndex(index: number): string {
+  let value = index;
+  let letters = "";
+  while (value > 0) {
+    const remainder = (value - 1) % 26;
+    letters = String.fromCharCode(65 + remainder) + letters;
+    value = Math.floor((value - 1) / 26);
+  }
+  return letters || "A";
+}
+
 async function syncTable(sheets: ReturnType<typeof google.sheets>, spreadsheetId: string, title: string, columns: readonly string[], rows: unknown[][]) {
   await ensureSheet(sheets, spreadsheetId, title);
   const range = `'${title}'!A:Z`;
@@ -112,24 +130,27 @@ async function syncTable(sheets: ReturnType<typeof google.sheets>, spreadsheetId
   const values = existing.data.values || [];
   const existingRows = new Map<string, number>();
   values.slice(1).forEach((row, index) => { if (row[0]) existingRows.set(String(row[0]), index + 2); });
-  if (!values.length || values[0][0] !== columns[0]) await sheets.spreadsheets.values.update({ spreadsheetId, range: `'${title}'!A1:${String.fromCharCode(64 + columns.length)}1`, valueInputOption: "RAW", requestBody: { values: [columns as unknown as string[]] } });
+  const maxColumns = Math.max(columns.length, ...rows.map((row) => row.length), 1);
+  const headerRange = `'${title}'!A1:${columnLetterForIndex(maxColumns)}1`;
+  if (!values.length || values[0][0] !== columns[0]) await sheets.spreadsheets.values.update({ spreadsheetId, range: headerRange, valueInputOption: "RAW", requestBody: { values: [columns as unknown as string[]] } });
   for (const row of rows) {
+    const normalized = Array.from({ length: maxColumns }, (_, index) => row[index] ?? "");
     const rowNumber = existingRows.get(String(row[0]));
-    const endColumn = String.fromCharCode(64 + row.length);
-    if (rowNumber) await sheets.spreadsheets.values.update({ spreadsheetId, range: `'${title}'!A${rowNumber}:${endColumn}${rowNumber}`, valueInputOption: "RAW", requestBody: { values: [row] } });
-    else await sheets.spreadsheets.values.append({ spreadsheetId, range: `'${title}'!A:${endColumn}`, valueInputOption: "RAW", insertDataOption: "INSERT_ROWS", requestBody: { values: [row] } });
+    const endColumn = columnLetterForIndex(Math.max(normalized.length, columns.length));
+    if (rowNumber) await sheets.spreadsheets.values.update({ spreadsheetId, range: `'${title}'!A${rowNumber}:${endColumn}${rowNumber}`, valueInputOption: "RAW", requestBody: { values: [normalized] } });
+    else await sheets.spreadsheets.values.append({ spreadsheetId, range: `'${title}'!A:${endColumn}`, valueInputOption: "RAW", insertDataOption: "INSERT_ROWS", requestBody: { values: [normalized] } });
   }
 }
 
 export async function GET() {
   const spreadsheetId = spreadsheetIdValue();
   const configured = Boolean(spreadsheetId && getSheetsClient());
-  return NextResponse.json({ configured, range: envValue("GOOGLE_SHEETS_RANGE") || "Records!A:N" });
+  return NextResponse.json({ configured, range: envValue("GOOGLE_SHEETS_RANGE") || "Records!A:Q" });
 }
 
 export async function POST(request: Request) {
   const spreadsheetId = spreadsheetIdValue();
-  const range = envValue("GOOGLE_SHEETS_RANGE") || "Records!A:N";
+  const range = envValue("GOOGLE_SHEETS_RANGE") || "Records!A:Q";
   const sheets = getSheetsClient();
 
   if (!spreadsheetId || !sheets) {
@@ -151,10 +172,11 @@ export async function POST(request: Request) {
       if (row[0]) existingRows.set(String(row[0]), index + 2);
     });
 
-    if (!values.length || values[0][0] !== headers[0]) {
+    const hasCurrentHeaders = values.length > 0 && headers.every((header, index) => values[0][index] === header);
+    if (!hasCurrentHeaders) {
       await sheets.spreadsheets.values.update({
         spreadsheetId,
-        range: range.split("!")[0] + "!A1:N1",
+        range: range.split("!")[0] + "!A1:Q1",
         valueInputOption: "RAW",
         requestBody: { values: [headers] },
       });
@@ -166,7 +188,7 @@ export async function POST(request: Request) {
       if (rowNumber) {
         await sheets.spreadsheets.values.update({
           spreadsheetId,
-          range: `${range.split("!")[0]}!A${rowNumber}:N${rowNumber}`,
+          range: `${range.split("!")[0]}!A${rowNumber}:Q${rowNumber}`,
           valueInputOption: "RAW",
           requestBody: { values: [row] },
         });

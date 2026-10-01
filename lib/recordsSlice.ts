@@ -42,6 +42,7 @@ export function makeBlankRecord(service: ServiceKey): JobRecord {
     invoiceNo: "",
     invoiceDate: today,
     invoiceCreated: false,
+    showInvoiceSignature: false,
     payments: [],
     expenses: [],
     warranty: svc.defaultWarranty,

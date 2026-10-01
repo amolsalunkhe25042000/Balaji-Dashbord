@@ -389,6 +389,38 @@ html, body {
   @apply inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white;
 }
 
+.invoice-signature {
+  width: 180px;
+  min-height: 76px;
+  color: #0b3142;
+  text-align: center;
+}
+.invoice-signature-ink {
+  overflow: hidden;
+  padding: 2px 8px 0;
+  color: #0f6570;
+  font-family: "Brush Script MT", "Segoe Script", cursive;
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transform: rotate(-3deg);
+}
+.invoice-signature-rule {
+  height: 1px;
+  margin: 4px 8px 5px;
+  background: linear-gradient(90deg, transparent, #0f8b8d 12%, #0b3142 50%, #0f8b8d 88%, transparent);
+}
+.invoice-signature-label {
+  color: #5b6b67;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
 @media print {
   .no-print {
     display: none !important;

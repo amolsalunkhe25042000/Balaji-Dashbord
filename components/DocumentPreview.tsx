@@ -104,7 +104,7 @@ export default function DocumentPreview({
           <p className="text-xs text-muted mt-2 mb-0.5">Contact</p>
           <div className="break-words text-[13px]">
             {record.company.phone1}
-            {record.company.phone2 ? ` / ${record.company.phone2}` : ""} · {record.company.website}
+            {record.company.phone2 ? ` / ${record.company.phone2}` : ""}  {record.company.website}
           </div>
         </div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-2">
@@ -144,7 +144,7 @@ export default function DocumentPreview({
 
       <div className="flex items-center justify-between px-6 sm:px-8 pt-4">
         <span className="text-[11px] uppercase tracking-widest font-bold" style={{ color: svc.accentHex }}>
-          {isInvoice ? "Tax invoice" : svc.scopeLabel}
+          {isInvoice ? "Invoice" : svc.scopeLabel}
         </span>
         {isInvoice ? (
           <span className="badge" style={{ backgroundColor: statusColor }}>
@@ -245,7 +245,7 @@ export default function DocumentPreview({
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 px-6 sm:px-8 pt-5 text-xs">
+      <div className={`grid grid-cols-1 ${isInvoice ? "" : "sm:grid-cols-2"} gap-5 px-6 sm:px-8 pt-5 text-xs`}>
         <div>
           <h3 className="text-[11px] uppercase tracking-wide text-muted font-semibold mb-1.5">
             {isInvoice ? "Payment received" : "Payment terms"}
@@ -262,22 +262,28 @@ export default function DocumentPreview({
           ) : (
             <p className="leading-relaxed">{record.paymentTerms}</p>
           )}
-          <h3 className="text-[11px] uppercase tracking-wide text-muted font-semibold mb-1.5 mt-2.5">Warranty</h3>
-          <p className="leading-relaxed">{record.warranty}</p>
+          {!isInvoice && (
+            <>
+              <h3 className="text-[11px] uppercase tracking-wide text-muted font-semibold mb-1.5 mt-2.5">Warranty</h3>
+              <p className="leading-relaxed">{record.warranty}</p>
+            </>
+          )}
         </div>
-        <div>
-          <h3 className="text-[11px] uppercase tracking-wide text-muted font-semibold mb-1.5">Terms and conditions</h3>
-          <ul className="list-disc pl-4 leading-relaxed">
-            {record.terms
-              .split("\n")
-              .filter(Boolean)
-              .map((t, i) => (
-                <li key={i} className="mb-1">
-                  {t}
-                </li>
-              ))}
-          </ul>
-        </div>
+        {!isInvoice && (
+          <div>
+            <h3 className="text-[11px] uppercase tracking-wide text-muted font-semibold mb-1.5">Terms and conditions</h3>
+            <ul className="list-disc pl-4 leading-relaxed">
+              {record.terms
+                .split("\n")
+                .filter(Boolean)
+                .map((t, i) => (
+                  <li key={i} className="mb-1">
+                    {t}
+                  </li>
+                ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       <div className="mt-5">
@@ -292,8 +298,18 @@ export default function DocumentPreview({
           This is a computer generated {docLabel.toLowerCase()}.
         </div>
         <div className="text-xs text-muted text-center">
-          <div className="w-[150px] border-t border-ink mb-1.5" />
-          For {record.company.name}
+          {isInvoice && record.showInvoiceSignature ? (
+            <div className="invoice-signature" aria-label={`Authorized signature for ${record.company.name}`}>
+              <div className="invoice-signature-ink">{record.company.name}</div>
+              <div className="invoice-signature-rule" />
+              <div className="invoice-signature-label">Authorized signatory</div>
+            </div>
+          ) : (
+            <>
+              <div className="w-[150px] border-t border-ink mb-1.5" />
+              For {record.company.name}
+            </>
+          )}
         </div>
       </div>
       </div>

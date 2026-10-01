@@ -91,6 +91,7 @@ export interface JobRecord {
   invoiceNo: string;
   invoiceDate: string;
   invoiceCreated: boolean;
+  showInvoiceSignature: boolean;
 
   payments: Payment[];
   expenses: Expense[];

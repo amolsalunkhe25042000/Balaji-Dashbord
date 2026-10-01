@@ -123,6 +123,24 @@ export default function InvoicePage({ params }: { params: { id: string } }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-5 items-start">
         <div className="no-print flex flex-col gap-4">
+          <section className="rounded-xl border border-line bg-white p-4">
+            <label htmlFor="invoice-signature" className="flex cursor-pointer items-start gap-3">
+              <input
+                id="invoice-signature"
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 accent-[#0F8B8D]"
+                checked={record.showInvoiceSignature}
+                onChange={(event) => dispatch(patchRecord({
+                  id: record.id,
+                  patch: { showInvoiceSignature: event.target.checked },
+                }))}
+              />
+              <span>
+                <span className="block text-sm font-semibold text-deep">Include authorized signature</span>
+                <span className="mt-0.5 block text-xs leading-relaxed text-muted">Show the styled company signature on this invoice and its printout.</span>
+              </span>
+            </label>
+          </section>
           <PaymentPanel
             record={record}
             balanceDue={totals.balanceDue}

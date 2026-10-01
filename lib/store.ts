@@ -116,6 +116,7 @@ function sanitizeRecord(raw: unknown): JobRecord | null {
     invoiceNo: toString(record.invoiceNo),
     invoiceDate: toString(record.invoiceDate),
     invoiceCreated: Boolean(record.invoiceCreated),
+    showInvoiceSignature: Boolean(record.showInvoiceSignature),
     payments,
     expenses,
     warranty: toString(record.warranty),

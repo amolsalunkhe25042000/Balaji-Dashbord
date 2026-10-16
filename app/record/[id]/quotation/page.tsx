@@ -1,16 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { selectRecordById, commitNextNumber, patchRecord, setStatus } from "@/lib/recordsSlice";
 import { RootState } from "@/lib/store";
 import DocumentPreview from "@/components/DocumentPreview";
+import DocumentEditor from "@/components/DocumentEditor";
 import StatusBadge from "@/components/StatusBadge";
 
 export default function QuotationPage({ params }: { params: { id: string } }) {
   const dispatch = useAppDispatch();
   const router = useRouter();
+  const [editing, setEditing] = useState(false);
   const record = useAppSelector((s: RootState) => selectRecordById(s, params.id));
 
   if (!record) {
@@ -52,6 +55,8 @@ export default function QuotationPage({ params }: { params: { id: string } }) {
     if (!record.quotationPrinted || record.status !== "quotation_sent") return;
     dispatch(setStatus({ id: record.id, status: "approved" }));
   };
+  const canEditQuotation = record.quotationPrinted && !record.invoiceCreated &&
+    (record.status === "quotation_sent" || record.status === "approved");
 
   return (
     <div className="flex flex-col gap-4">
@@ -70,6 +75,11 @@ export default function QuotationPage({ params }: { params: { id: string } }) {
           <button className="btn-outline" onClick={reprint} disabled={record.status === "request_closed"}>
             Print quotation
           </button>
+          {canEditQuotation && (
+            <button type="button" className={editing ? "btn-outline" : "btn-primary"} onClick={() => setEditing((value) => !value)}>
+              {editing ? "Close editor" : "Edit quotation"}
+            </button>
+          )}
           {(record.status === "enquiry" || record.status === "quotation_sent" || record.status === "request_closed") && (
             <button className="btn-outline text-red-700" onClick={toggleRequestClosed}>
               {record.status === "request_closed" ? "Reopen request" : "Mark customer rejected"}
@@ -88,6 +98,17 @@ export default function QuotationPage({ params }: { params: { id: string } }) {
         </div>
       </div>
 
+      {editing && canEditQuotation && (
+        <DocumentEditor
+          record={record}
+          documentType="quotation"
+          onCancel={() => setEditing(false)}
+          onSave={(patch) => {
+            dispatch(patchRecord({ id: record.id, patch }));
+            setEditing(false);
+          }}
+        />
+      )}
       <DocumentPreview record={record} mode="quotation" />
     </div>
   );

@@ -1,6 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import recordsReducer, { RecordsState } from "./recordsSlice";
-import settingsReducer, { ALL_JOB_STATUSES, DEFAULT_SETTINGS, MANAGEMENT_PANELS, OPERATIONS_COLUMNS, SettingsState } from "./settingsSlice";
+import settingsReducer, { ALL_JOB_STATUSES, DEFAULT_SETTINGS, SettingsState } from "./settingsSlice";
 import { BusinessExpense, Expense, JobRecord, JobStatus, LineItem, Payment, ServiceKey } from "./types";
 
 const VALID_SERVICES = new Set<ServiceKey>(["painting", "waterproofing"]);
@@ -107,6 +107,8 @@ function sanitizeRecord(raw: unknown): JobRecord | null {
     customer,
     items,
     discountPercent: toNumber(record.discountPercent, 0),
+    discountMode: record.discountMode === "amount" ? "amount" : "percent",
+    discountValue: toNumber(record.discountValue, toNumber(record.discountPercent, 0)),
     gstEnabled: Boolean(record.gstEnabled),
     gstPercent: toNumber(record.gstPercent, 18),
     quotationNo: toString(record.quotationNo),
@@ -209,21 +211,9 @@ export function loadStoredSettings(): SettingsState | undefined {
     const dashboardWidgets = parsed.dashboardWidgets.filter((widget) =>
       DEFAULT_SETTINGS.dashboardWidgets.includes(widget as (typeof DEFAULT_SETTINGS.dashboardWidgets)[number])
     ) as SettingsState["dashboardWidgets"];
-    const managementPanels = Array.isArray(parsed.managementPanels)
-      ? parsed.managementPanels.filter((panel) => MANAGEMENT_PANELS.includes(panel as (typeof MANAGEMENT_PANELS)[number])) as SettingsState["managementPanels"]
-      : [...DEFAULT_SETTINGS.managementPanels];
-    const operationsColumns = Array.isArray(parsed.operationsColumns)
-      ? parsed.operationsColumns.filter((column) => OPERATIONS_COLUMNS.includes(column as (typeof OPERATIONS_COLUMNS)[number])) as SettingsState["operationsColumns"]
-      : [...DEFAULT_SETTINGS.operationsColumns];
-    const visibleStatuses = Array.isArray(parsed.visibleStatuses)
-      ? parsed.visibleStatuses.filter((status) => ALL_JOB_STATUSES.includes(status as (typeof ALL_JOB_STATUSES)[number])) as SettingsState["visibleStatuses"]
-      : [...DEFAULT_SETTINGS.visibleStatuses];
     return {
       brandingName: parsed.brandingName.trim() || DEFAULT_SETTINGS.brandingName,
       dashboardWidgets: dashboardWidgets.length ? dashboardWidgets : [...DEFAULT_SETTINGS.dashboardWidgets],
-      managementPanels: managementPanels.length ? managementPanels : [...DEFAULT_SETTINGS.managementPanels],
-      operationsColumns: operationsColumns.length ? operationsColumns : [...DEFAULT_SETTINGS.operationsColumns],
-      visibleStatuses: visibleStatuses.length ? visibleStatuses : [...DEFAULT_SETTINGS.visibleStatuses],
     };
   } catch {
     return undefined;

@@ -126,21 +126,6 @@ html, body {
 .header-mobile-links + .header-mobile-links {
   border-top: 1px solid rgba(159, 211, 210, 0.18);
 }
-.header-avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  align-self: center;
-  width: 29px;
-  height: 29px;
-  margin-left: 5px;
-  border-radius: 999px;
-  background: #D96272;
-  color: white;
-  font-size: 13px;
-  font-weight: 800;
-}
-
 .action-view,
 .action-update {
   display: inline-flex;
@@ -170,7 +155,7 @@ html, body {
   filter: brightness(0.94);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 1023px) {
   .brand-title {
     max-width: min(210px, 48vw);
     overflow: hidden;
@@ -197,12 +182,8 @@ html, body {
 
 @media (max-width: 380px) {
   .brand-subtitle,
-  .header-avatar {
+  .header-nav-link {
     display: none;
-  }
-  .header-nav-link,
-  .header-utility {
-    min-width: 34px;
   }
   .header-mobile-links {
     grid-template-columns: 1fr;

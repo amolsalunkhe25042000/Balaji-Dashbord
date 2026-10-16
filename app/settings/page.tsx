@@ -4,47 +4,14 @@ import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { deleteRecord, hydrate, selectAllRecords } from "@/lib/recordsSlice";
-import { ALL_JOB_STATUSES, DASHBOARD_WIDGETS, DEFAULT_SETTINGS, DashboardWidget, MANAGEMENT_PANELS, ManagementPanel, OPERATIONS_COLUMNS, OperationsColumn, updateSettings, resetSettings } from "@/lib/settingsSlice";
+import { DASHBOARD_WIDGETS, DEFAULT_SETTINGS, DashboardWidget, updateSettings, resetSettings } from "@/lib/settingsSlice";
 import { saveStoredSettings, syncRecordsToGoogleSheets } from "@/lib/store";
 import ProtectedPage from "@/components/ProtectedPage";
 import { backupSummary, createBackup, parseBackup } from "@/lib/backup";
 
 const WIDGET_LABELS: Record<DashboardWidget, string> = {
-  totalJobs: "Total jobs",
-  customerVisits: "Customer visits",
-  pendingApproval: "Pending approval",
-  pendingPayment: "Pending payment",
-  completeWork: "Complete work",
-  closedRequests: "Closed requests",
-  totalCollected: "Total collected",
-  totalPendingAmount: "Total pending amount",
-  managementDashboard: "Management charts and tables",
-  recentWork: "Recent work list",
-};
-
-const PANEL_LABELS: Record<ManagementPanel, string> = {
-  requestStatus: "Request status chart",
-  serviceMix: "Service mix chart",
-  cashPosition: "Cash position chart",
-  operationsMatrix: "Operations matrix",
-  serviceValueMap: "Service value map",
-};
-
-const COLUMN_LABELS: Record<OperationsColumn, string> = {
-  requests: "Request count",
-  share: "Percentage share",
-  value: "Quoted value",
-};
-
-const STATUS_LABELS: Record<(typeof ALL_JOB_STATUSES)[number], string> = {
-  enquiry: "Enquiry",
-  quotation_sent: "Quotation sent",
-  approved: "Approved",
-  invoiced: "Pending payment",
-  partially_paid: "Partially paid",
-  paid: "Paid",
-  closed: "Work complete",
-  request_closed: "Request closed",
+  managementDashboard: "Job pipeline",
+  recentWork: "Recent jobs",
 };
 
 export default function SettingsPage() {
@@ -54,9 +21,6 @@ export default function SettingsPage() {
   const recordsState = useAppSelector((state) => state.records);
   const [brandingName, setBrandingName] = useState(savedSettings.brandingName);
   const [dashboardWidgets, setDashboardWidgets] = useState<DashboardWidget[]>(savedSettings.dashboardWidgets);
-  const [managementPanels, setManagementPanels] = useState<ManagementPanel[]>(savedSettings.managementPanels);
-  const [operationsColumns, setOperationsColumns] = useState<OperationsColumn[]>(savedSettings.operationsColumns);
-  const [visibleStatuses, setVisibleStatuses] = useState(savedSettings.visibleStatuses);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [saved, setSaved] = useState(false);
   const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "success" | "failed">("idle");
@@ -66,9 +30,6 @@ export default function SettingsPage() {
   useEffect(() => {
     setBrandingName(savedSettings.brandingName);
     setDashboardWidgets(savedSettings.dashboardWidgets);
-    setManagementPanels(savedSettings.managementPanels);
-    setOperationsColumns(savedSettings.operationsColumns);
-    setVisibleStatuses(savedSettings.visibleStatuses);
   }, [savedSettings]);
 
   function toggleWidget(widget: DashboardWidget) {
@@ -111,13 +72,9 @@ export default function SettingsPage() {
     if (success) setLastSync(new Date().toLocaleString("en-IN"));
   }
 
-  function toggleSetting<T extends string>(value: T, setter: React.Dispatch<React.SetStateAction<T[]>>) {
-    setter((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value]);
-  }
-
   function saveSettings(event: FormEvent) {
     event.preventDefault();
-    const nextSettings = { brandingName: brandingName.trim() || DEFAULT_SETTINGS.brandingName, dashboardWidgets, managementPanels, operationsColumns, visibleStatuses };
+    const nextSettings = { ...savedSettings, brandingName: brandingName.trim() || DEFAULT_SETTINGS.brandingName, dashboardWidgets };
     dispatch(updateSettings(nextSettings));
     saveStoredSettings(nextSettings);
     setSaved(true);
@@ -143,13 +100,13 @@ export default function SettingsPage() {
   }
 
   return (
-    <ProtectedPage title="Dashboard settings" description="This area changes your workspace layout and can delete CRM records.">
+    <ProtectedPage title="Workspace settings" description="Customize your workspace and manage saved CRM data.">
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-water">Workspace configuration</p>
-          <h1 className="text-xl font-display font-bold text-deep">Dashboard settings</h1>
-          <p className="text-sm text-muted">Create, edit, update, or reset what your team sees.</p>
+          <h1 className="text-xl font-display font-bold text-deep">Workspace settings</h1>
+          <p className="text-sm text-muted">Set your business name, customize the dashboard, and manage data safety.</p>
         </div>
         <Link href="/" className="btn-outline text-xs">Back to dashboard</Link>
       </div>
@@ -164,7 +121,7 @@ export default function SettingsPage() {
 
         <div>
           <h2 className="font-display text-lg font-bold text-deep">Dashboard visibility</h2>
-          <p className="text-xs text-muted mt-1">Select the cards and sections that should show on the dashboard.</p>
+          <p className="text-xs text-muted mt-1">Choose which helpful sections appear on the dashboard.</p>
           <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {DASHBOARD_WIDGETS.map((widget) => (
               <label key={widget} className="flex items-center gap-3 rounded-md border border-line bg-panel px-3 py-3 text-sm text-deep cursor-pointer">
@@ -172,25 +129,6 @@ export default function SettingsPage() {
                 <span>{WIDGET_LABELS[widget]}</span>
               </label>
             ))}
-          </div>
-        </div>
-
-        <div>
-          <h2 className="font-display text-lg font-bold text-deep">Management dashboard</h2>
-          <p className="text-xs text-muted mt-1">Choose the detail panels and table columns shown in the management dashboard.</p>
-          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {MANAGEMENT_PANELS.map((panel) => <label key={panel} className="flex items-center gap-3 rounded-md border border-line bg-panel px-3 py-3 text-sm text-deep cursor-pointer"><input type="checkbox" checked={managementPanels.includes(panel)} onChange={() => toggleSetting(panel, setManagementPanels)} /><span>{PANEL_LABELS[panel]}</span></label>)}
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {OPERATIONS_COLUMNS.map((column) => <label key={column} className="flex items-center gap-2 rounded-md border border-line px-3 py-2 text-xs text-deep cursor-pointer"><input type="checkbox" checked={operationsColumns.includes(column)} onChange={() => toggleSetting(column, setOperationsColumns)} /><span>{COLUMN_LABELS[column]}</span></label>)}
-          </div>
-        </div>
-
-        <div>
-          <h2 className="font-display text-lg font-bold text-deep">Request status filters</h2>
-          <p className="text-xs text-muted mt-1">Choose which statuses appear in the Request status chart and Operations matrix.</p>
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {ALL_JOB_STATUSES.map((status) => <label key={status} className="flex items-center gap-2 rounded-md border border-line px-3 py-2 text-xs text-deep cursor-pointer"><input type="checkbox" checked={visibleStatuses.includes(status)} onChange={() => toggleSetting(status, setVisibleStatuses)} /><span>{STATUS_LABELS[status]}</span></label>)}
           </div>
         </div>
 

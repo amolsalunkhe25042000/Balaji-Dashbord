@@ -12,7 +12,7 @@ export default function ApprovedJobsPage() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-xl font-display font-bold text-deep">Approved customers &amp; jobs</h1>
+        <h1 className="text-xl font-display font-bold text-deep">Jobs</h1>
         <p className="text-sm text-muted">All work that has passed the approval stage and is now tracked for invoicing and payment.</p>
       </div>
       <CustomerTable records={approvedRecords} />

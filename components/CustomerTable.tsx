@@ -14,14 +14,11 @@ type CustomerTableFilter = "all" | JobStatus;
 
 const FILTERS: { key: CustomerTableFilter; label: string }[] = [
   { key: "all", label: "All" },
-  { key: "enquiry", label: "Enquiry" },
-  { key: "quotation_sent", label: "Quotation sent" },
   { key: "approved", label: "Approved" },
   { key: "invoiced", label: "Pending" },
   { key: "partially_paid", label: "Partially paid" },
   { key: "paid", label: "Paid" },
-  { key: "closed", label: "Closed" },
-  { key: "request_closed", label: "Request closed" },
+  { key: "closed", label: "Work Done" },
 ];
 
 export default function CustomerTable({ records }: { records: JobRecord[] }) {
@@ -29,6 +26,9 @@ export default function CustomerTable({ records }: { records: JobRecord[] }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<CustomerTableFilter>("all");
   const [dateFilter, setDateFilter] = useState("");
+  const availableFilters = FILTERS.filter((option) =>
+    option.key === "all" || records.some((record) => record.status === option.key)
+  );
 
   const filtered = useMemo(() => {
     return [...records]
@@ -79,7 +79,9 @@ export default function CustomerTable({ records }: { records: JobRecord[] }) {
         "Updated at": record.updatedAt || "",
         "Created at": record.createdAt || "",
         "Items count": record.items.length,
-        "Discount %": record.discountPercent,
+        Discount: record.discountMode === "amount"
+          ? `₹${record.discountValue ?? 0}`
+          : `${record.discountValue ?? record.discountPercent}%`,
         "GST enabled": record.gstEnabled ? "Yes" : "No",
         "GST %": record.gstPercent,
       };
@@ -94,7 +96,7 @@ export default function CustomerTable({ records }: { records: JobRecord[] }) {
     ];
 
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Approved jobs");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Jobs");
     XLSX.writeFile(workbook, `balaji-approved-jobs-${filtered.length}-records.xlsx`);
   };
 
@@ -123,7 +125,7 @@ export default function CustomerTable({ records }: { records: JobRecord[] }) {
             onChange={(e) => setDateFilter(e.target.value)}
           />
           <select className="field-input !w-auto text-sm" value={filter} onChange={(e) => setFilter(e.target.value as CustomerTableFilter)}>
-            {FILTERS.map((f) => (
+            {availableFilters.map((f) => (
               <option key={f.key} value={f.key}>
                 {f.label}
               </option>
@@ -203,7 +205,7 @@ export default function CustomerTable({ records }: { records: JobRecord[] }) {
                             )
                           }
                         >
-                          {r.status === "request_closed" ? "Reopen" : "Close request"}
+                          {r.status === "request_closed" ? "Reopen" : "Mark rejected"}
                         </button>
                       )}
                     </div>

@@ -198,7 +198,11 @@ export default function DocumentPreview({
             </tr>
             {totals.discountAmount > 0 && (
               <tr>
-                <td className="py-1.5 text-muted">Discount ({record.discountPercent}%)</td>
+                <td className="py-1.5 text-muted">
+                  Discount ({record.discountMode === "amount"
+                    ? `₹${fmtMoney(record.discountValue ?? 0)}`
+                    : `${record.discountValue ?? record.discountPercent}%`})
+                </td>
                 <td className="py-1.5 text-right font-semibold font-mono">− ₹ {fmtMoney(totals.discountAmount)}</td>
               </tr>
             )}

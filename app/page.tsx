@@ -4,70 +4,35 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useAppSelector } from "@/lib/hooks";
 import { selectAllRecords } from "@/lib/recordsSlice";
-import { fmtMoney, isApprovedWork } from "@/lib/money";
+import { fmtMoney } from "@/lib/money";
 import { selectFinancialSummary } from "@/lib/financial";
 import { JobStatus, ServiceKey } from "@/lib/types";
 import StatCard from "@/components/StatCard";
 import RecentWork from "@/components/RecentWork";
 import ManagementDashboard from "@/components/ManagementDashboard";
 
-type QuickFilter = "all" | "active" | "pending_approval" | "completed";
-
 export default function DashboardPage() {
   const records = useAppSelector(selectAllRecords);
   const dashboardWidgets = useAppSelector((state) => state.settings.dashboardWidgets);
-  const managementPanels = useAppSelector((state) => state.settings.managementPanels);
-  const operationsColumns = useAppSelector((state) => state.settings.operationsColumns);
-  const visibleStatuses = useAppSelector((state) => state.settings.visibleStatuses);
   const brandingName = useAppSelector((state) => state.settings.brandingName);
-  const businessExpenses = useAppSelector((state) => state.records.businessExpenses || []);
   const financialSummary = useAppSelector(selectFinancialSummary);
   const [activeStatus, setActiveStatus] = useState<"all" | JobStatus>("all");
   const [activeService, setActiveService] = useState<"all" | ServiceKey>("all");
-  const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
-
-  const handleQuickFilter = (next: QuickFilter) => {
-    setQuickFilter(next);
-    if (next === "all") {
-      setActiveStatus("all");
-      return;
-    }
-    if (next === "active") {
-      setActiveStatus("all");
-      return;
-    }
-    if (next === "pending_approval") {
-      setActiveStatus("quotation_sent");
-      return;
-    }
-    setActiveStatus("closed");
-  };
 
   const totalJobs = records.length;
-  const activeJobs = records.filter((r) => !["closed", "request_closed"].includes(r.status)).length;
   const closed = records.filter((r) => r.status === "closed").length;
+  const enquiries = records.filter((r) => r.status === "enquiry").length;
   const pendingApproval = records.filter((r) => r.status === "quotation_sent").length;
 
   const filteredRecords = useMemo(() => {
-    let nextRecords = records;
-
-    if (quickFilter === "active") {
-      nextRecords = nextRecords.filter((record) => !["closed", "request_closed"].includes(record.status));
-    } else if (quickFilter === "pending_approval") {
-      nextRecords = nextRecords.filter((record) => record.status === "quotation_sent");
-    } else if (quickFilter === "completed") {
-      nextRecords = nextRecords.filter((record) => record.status === "closed");
-    }
-
-    return nextRecords.filter((record) =>
+    return records.filter((record) =>
       (activeStatus === "all" || record.status === activeStatus) &&
       (activeService === "all" || record.service === activeService)
     );
-  }, [records, activeService, activeStatus, quickFilter]);
-
-  const visibleRecords = useMemo(
-    () => filteredRecords.filter(isApprovedWork),
-    [filteredRecords]
+  }, [records, activeService, activeStatus]);
+  const pipelineRecords = useMemo(
+    () => activeService === "all" ? records : records.filter((record) => record.service === activeService),
+    [activeService, records]
   );
 
   return (
@@ -76,17 +41,6 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-xl font-display font-bold text-deep">{brandingName} Dashboard</h1>
           <p className="text-sm text-muted">Overview of every enquiry, quotation and invoice.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/approved" className="btn-primary text-xs">
-            Approved customers &amp; jobs
-          </Link>
-          <Link href="/visits" className="btn-outline text-xs">
-            Customer visits &amp; approval queue
-          </Link>
-          <Link href="/new" className="btn-outline text-xs">
-            + New visit
-          </Link>
         </div>
       </div>
 
@@ -109,39 +63,31 @@ export default function DashboardPage() {
       <section className="flex flex-col gap-3" aria-label="Key performance indicators">
         <div><h2 className="font-display text-lg font-bold text-deep">Jobs</h2><p className="text-xs text-muted">Work that needs attention and work completed.</p></div>
         <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3 md:grid-cols-4">
-          <StatCard label="Total jobs" value={String(totalJobs)} active={quickFilter === "all"} onClick={() => handleQuickFilter("all")} />
-          <StatCard label="Active jobs" value={String(activeJobs)} tone="warn" active={quickFilter === "active"} onClick={() => handleQuickFilter("active")} />
-          <StatCard label="Pending approval" value={String(pendingApproval)} tone="warn" sub="Quotation sent" active={quickFilter === "pending_approval"} onClick={() => handleQuickFilter("pending_approval")} />
-          <StatCard label="Completed jobs" value={String(closed)} tone="good" active={quickFilter === "completed"} onClick={() => handleQuickFilter("completed")} />
+          <StatCard label="Total jobs" value={String(totalJobs)} active={activeStatus === "all" && activeService === "all"} onClick={() => { setActiveStatus("all"); setActiveService("all"); }} />
+          <StatCard label="New enquiries" value={String(enquiries)} tone="warn" active={activeStatus === "enquiry"} onClick={() => setActiveStatus("enquiry")} />
+          <StatCard label="Awaiting approval" value={String(pendingApproval)} tone="warn" active={activeStatus === "quotation_sent"} onClick={() => setActiveStatus("quotation_sent")} />
+          <StatCard label="Work Done" value={String(closed)} tone="good" active={activeStatus === "closed"} onClick={() => setActiveStatus("closed")} />
         </div>
-        <div><h2 className="font-display text-lg font-bold text-deep">Finance</h2><p className="text-xs text-muted">Invoice value, cash received, and money still due.</p></div>
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div><h2 className="font-display text-lg font-bold text-deep">Money snapshot</h2><p className="text-xs text-muted">Invoice value, cash received, and money still due.</p></div>
+          <Link href="/owner" className="text-xs font-semibold text-water hover:underline">Manage expenses and reports →</Link>
+        </div>
         <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3 md:grid-cols-3">
           <StatCard label="Total invoiced" value={`₹ ${fmtMoney(financialSummary.revenue)}`} />
           <StatCard label="Total paid" value={`₹ ${fmtMoney(financialSummary.paidAmount)}`} tone="good" />
           <StatCard label="Outstanding" value={`₹ ${fmtMoney(financialSummary.outstandingAmount)}`} tone="bad" />
         </div>
-        <div><h2 className="font-display text-lg font-bold text-deep">Profit</h2><p className="text-xs text-muted">Profit is revenue minus expenses, not cash received.</p></div>
-        <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3 md:grid-cols-4">
-          <StatCard label="Job expenses" value={`₹ ${fmtMoney(financialSummary.jobExpenses)}`} tone="warn" />
-          <StatCard label="Gross profit" value={`₹ ${fmtMoney(financialSummary.grossProfit)}`} tone={financialSummary.grossProfit >= 0 ? "good" : "bad"} />
-          <StatCard label="Business expenses" value={`₹ ${fmtMoney(financialSummary.businessExpenses)}`} tone="warn" />
-          <StatCard label="Net profit" value={`₹ ${fmtMoney(financialSummary.netProfit)}`} tone={financialSummary.netProfit >= 0 ? "good" : "bad"} />
-        </div>
       </section>
 
       {dashboardWidgets.includes("managementDashboard") && <ManagementDashboard
-        records={filteredRecords}
-        businessExpenses={businessExpenses}
-        financialSummary={financialSummary}
+        records={pipelineRecords}
         activeStatus={activeStatus}
         activeService={activeService}
         onStatusSelect={setActiveStatus}
         onServiceSelect={setActiveService}
-        managementPanels={managementPanels}
-        operationsColumns={operationsColumns}
-        visibleStatuses={visibleStatuses}
+        onClearFilters={() => { setActiveStatus("all"); setActiveService("all"); }}
       />}
-      {dashboardWidgets.includes("recentWork") && <RecentWork records={visibleRecords} />}
+      {dashboardWidgets.includes("recentWork") && <RecentWork records={filteredRecords} />}
     </div>
   );
 }

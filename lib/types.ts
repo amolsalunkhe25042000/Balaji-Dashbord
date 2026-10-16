@@ -80,6 +80,8 @@ export interface JobRecord {
   items: LineItem[];
 
   discountPercent: number;
+  discountMode?: "percent" | "amount";
+  discountValue?: number;
   gstEnabled: boolean;
   gstPercent: number;
 

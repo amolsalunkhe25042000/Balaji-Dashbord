@@ -9,7 +9,7 @@ export const JOB_EXPENSE_LABELS: Record<ExpenseCategory, string> = {
   equipment: "Equipment",
   subcontractor: "Subcontractor",
   food_travel: "Food / travel",
-  other: "Other",
+  other: "Description",
 };
 
 export const JOB_EXPENSE_COLORS: Record<ExpenseCategory, string> = {

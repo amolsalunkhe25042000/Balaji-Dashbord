@@ -56,8 +56,11 @@ export function numberToWordsIndian(input: number): string {
 
 export function computeTotals(record: JobRecord): Totals {
   const subtotal = record.items.reduce((sum, item) => sum + lineItemTotal(item), 0);
-  const discountPercent = Math.min(Math.max(Number(record.discountPercent) || 0, 0), 100);
-  const discountAmount = (subtotal * discountPercent) / 100;
+  const discountMode = record.discountMode || "percent";
+  const discountValue = Math.max(Number(record.discountValue ?? record.discountPercent) || 0, 0);
+  const discountAmount = discountMode === "amount"
+    ? Math.min(discountValue, subtotal)
+    : (subtotal * Math.min(discountValue, 100)) / 100;
   const taxable = subtotal - discountAmount;
   const gstPercent = Math.max(Number(record.gstPercent) || 0, 0);
   const gstAmount = record.gstEnabled ? (taxable * gstPercent) / 100 : 0;

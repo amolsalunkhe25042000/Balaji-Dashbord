@@ -7,8 +7,8 @@ const STATUS_META: Record<JobStatus, { label: string; className: string }> = {
   invoiced: { label: "Pending", className: "bg-amber-500" },
   partially_paid: { label: "Partially paid", className: "bg-orange-500" },
   paid: { label: "Paid", className: "bg-emerald-600" },
-  closed: { label: "Closed / Complete", className: "bg-slate-700" },
-  request_closed: { label: "Request closed", className: "bg-red-700" },
+  closed: { label: "Work Done", className: "bg-slate-700" },
+  request_closed: { label: "Rejected", className: "bg-red-700" },
 };
 
 export default function StatusBadge({ status }: { status: JobStatus }) {

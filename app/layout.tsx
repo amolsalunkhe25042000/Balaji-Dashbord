@@ -13,8 +13,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="min-h-screen font-sans">
         <Providers>
-          <TopNav />
-          <main className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 py-5">{children}</main>
+          <div className="app-shell">
+            <TopNav />
+            <div className="app-main-shell">
+              <main className="app-main max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 py-5">{children}</main>
+            </div>
+          </div>
         </Providers>
       </body>
     </html>

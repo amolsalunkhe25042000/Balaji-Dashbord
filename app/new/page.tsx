@@ -34,7 +34,7 @@ export default function NewJobPage() {
         draft.customer.contact ||
         draft.customer.site ||
         hasChangedItem ||
-        draft.discountPercent ||
+        (draft.discountValue ?? draft.discountPercent) ||
         draft.gstEnabled ||
         draft.quotationNo ||
         draft.quotationPrinted ||
@@ -107,7 +107,7 @@ export default function NewJobPage() {
     <div className="flex flex-col gap-4">
       <div className="no-print flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-display font-bold text-deep">New job</h1>
+          <h1 className="text-xl font-display font-bold text-deep">New Job</h1>
             <p className="text-sm text-muted">Save a customer enquiry first, or continue to the quotation stage when the customer accepts.</p>
         </div>
         <div className="bg-deep rounded-lg p-1">
@@ -271,13 +271,34 @@ export default function NewJobPage() {
             <div className="panel-body">
               <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
                 <div>
-                  <label className="field-label">Discount (%)</label>
-                  <input
-                    type="number"
-                    className="field-input"
-                    value={draft.discountPercent}
-                    onChange={(e) => patch({ discountPercent: Number(e.target.value) })}
-                  />
+                  <label className="field-label" htmlFor="new-discount-mode">Discount type</label>
+                  <div className="flex gap-2">
+                    <select
+                      id="new-discount-mode"
+                      className="field-input !w-auto"
+                      value={draft.discountMode || "percent"}
+                      onChange={(event) => patch({ discountMode: event.target.value as "percent" | "amount" })}
+                    >
+                      <option value="percent">%</option>
+                      <option value="amount">₹</option>
+                    </select>
+                    <input
+                      type="number"
+                      min="0"
+                      max={draft.discountMode === "amount" ? undefined : 100}
+                      step="0.01"
+                      className="field-input"
+                      aria-label={draft.discountMode === "amount" ? "Discount amount in rupees" : "Discount percentage"}
+                      value={draft.discountValue ?? draft.discountPercent}
+                      onChange={(event) => {
+                        const discountValue = Number(event.target.value);
+                        patch({
+                          discountValue,
+                          discountPercent: (draft.discountMode || "percent") === "percent" ? discountValue : 0,
+                        });
+                      }}
+                    />
+                  </div>
                 </div>
                 <div className="flex flex-col justify-end">
                   <div className="flex items-center gap-2 text-sm">

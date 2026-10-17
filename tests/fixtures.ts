@@ -1,0 +1,40 @@
+import { JobRecord } from "@/lib/types";
+
+export function sampleRecord(overrides: Partial<JobRecord> = {}): JobRecord {
+  return {
+    id: "job-1",
+    service: "painting",
+    status: "invoiced",
+    company: {
+      name: "Balaji Paints",
+      tagline: "",
+      address: "",
+      phone1: "",
+      phone2: "",
+      email: "",
+      website: "",
+      gstin: "",
+    },
+    customer: { name: "Test customer", address: "", contact: "", site: "" },
+    items: [{ id: "item-1", description: "Painting", unit: "Sq.ft", qty: 2, rate: 100 }],
+    discountPercent: 0,
+    gstEnabled: true,
+    gstPercent: 18,
+    quotationNo: "Q-1",
+    quotationDate: "2026-01-01",
+    validityDays: 15,
+    quotationPrinted: true,
+    invoiceNo: "I-1",
+    invoiceDate: "2026-01-01",
+    invoiceCreated: true,
+    showInvoiceSignature: false,
+    payments: [],
+    expenses: [],
+    warranty: "",
+    paymentTerms: "",
+    terms: "",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    ...overrides,
+  };
+}

@@ -10,14 +10,15 @@ const statuses = [
   ["Invoiced", "An invoice exists but no payment has been recorded.", "bg-amber-500"],
   ["Partially paid", "A payment was received and a balance is still open.", "bg-orange-500"],
   ["Paid", "The invoice balance is fully settled.", "bg-emerald-600"],
-  ["Closed", "The work is delivered and archived from the active pipeline.", "bg-slate-700"],
-  ["Request closed", "The enquiry did not convert into a job.", "bg-red-700"],
+  ["Work Done", "The work is delivered and archived from the active pipeline.", "bg-slate-700"],
+  ["Rejected", "The customer declined the quotation, so the request did not convert into a job.", "bg-red-700"],
 ];
 
 const faqs = [
   ["Where is my data stored?", "Records and dashboard settings are stored in this browser's local storage. Keep a backup of important quotations and invoices, especially before clearing browser data."],
-  ["Can I change a job after saving it?", "Yes. Open the job from Approved jobs or a recent-work row, update the details, and save the changes from that record page."],
-  ["Why did my dashboard layout change?", "Dashboard visibility, management panels, status filters, and Operations matrix columns are controlled from Settings. Reset settings restores every available section."],
+  ["Can I change a job after saving it?", "Yes. Open the job from Jobs or a recent-work row, update the details, and save the changes from that record page."],
+  ["Where can I manage money?", "Open Finance from the top menu. Use Expenses to record job and business costs, and Reports to filter, print, or export financial information."],
+  ["How do I change the dashboard?", "Open Settings to change your business name or show and hide the job pipeline and recent-jobs list."],
   ["What happens when I switch service?", "Painting and Waterproofing have different templates, defaults, numbering prefixes, and terms. If the current job has edits, the switch modal asks you to confirm before clearing them."],
 ];
 
@@ -50,7 +51,7 @@ export default function HelpPage() {
             ["01", "Choose a service", "Start a new job and select Painting or Waterproofing. Each service loads its own work items, terms, and document numbering."],
             ["02", "Capture the visit", "Add the customer, site, scope, quantities, rates, discount, GST, and payment terms. Save as an enquiry when details are still being collected."],
             ["03", "Send the quotation", "Use Save & print quotation. The quotation number is generated only when you print, keeping numbering clean."],
-            ["04", "Track the outcome", "Move through approval, invoice, payments, and closure. The dashboard and Approved jobs view update from the same live records."],
+            ["04", "Track the outcome", "Move through approval, invoice, payments, and completion. The dashboard and Jobs view update from the same live records."],
           ].map(([number, title, text]) => (
             <article key={number} className="panel p-4">
               <span className="font-mono text-sm font-bold text-water">{number}</span>
@@ -59,6 +60,11 @@ export default function HelpPage() {
             </article>
           ))}
         </div>
+      </section>
+
+      <section className="panel flex flex-wrap items-center justify-between gap-4 p-5">
+        <div><p className="text-[11px] font-bold uppercase tracking-[0.18em] text-water">Finance made simple</p><h2 className="mt-1 font-display text-xl font-bold text-deep">Record a cost or check what is still due</h2><p className="mt-1 text-sm text-muted">Manage job costs, business expenses, outstanding balances, and reports from one Finance page.</p></div>
+        <Link href="/owner" className="btn-primary text-xs">Open Finance</Link>
       </section>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.1fr_0.9fr]">
@@ -95,7 +101,7 @@ export default function HelpPage() {
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <div className="rounded-lg bg-panel p-4"><h3 className="font-display font-bold text-deep">Branding</h3><p className="mt-1 text-xs leading-relaxed text-muted">Change the workspace name shown in the navigation and dashboard heading.</p></div>
-          <div className="rounded-lg bg-panel p-4"><h3 className="font-display font-bold text-deep">Visibility</h3><p className="mt-1 text-xs leading-relaxed text-muted">Show only the stat cards, charts, and recent-work sections your team actually uses.</p></div>
+          <div className="rounded-lg bg-panel p-4"><h3 className="font-display font-bold text-deep">Visibility</h3><p className="mt-1 text-xs leading-relaxed text-muted">Show or hide the job pipeline and recent-jobs sections your team uses.</p></div>
           <div className="rounded-lg bg-panel p-4"><h3 className="font-display font-bold text-deep">Data management</h3><p className="mt-1 text-xs leading-relaxed text-muted">Select one or multiple records in Settings to delete old or test data permanently.</p></div>
         </div>
       </section>

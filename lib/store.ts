@@ -1,6 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import recordsReducer, { RecordsState } from "./recordsSlice";
-import settingsReducer, { ALL_JOB_STATUSES, DEFAULT_SETTINGS, MANAGEMENT_PANELS, OPERATIONS_COLUMNS, SettingsState } from "./settingsSlice";
+import settingsReducer, { ALL_JOB_STATUSES, DEFAULT_SETTINGS, SettingsState } from "./settingsSlice";
 import { BusinessExpense, Expense, JobRecord, JobStatus, LineItem, Payment, ServiceKey } from "./types";
 
 const VALID_SERVICES = new Set<ServiceKey>(["painting", "waterproofing"]);
@@ -107,6 +107,8 @@ function sanitizeRecord(raw: unknown): JobRecord | null {
     customer,
     items,
     discountPercent: toNumber(record.discountPercent, 0),
+    discountMode: record.discountMode === "amount" ? "amount" : "percent",
+    discountValue: toNumber(record.discountValue, toNumber(record.discountPercent, 0)),
     gstEnabled: Boolean(record.gstEnabled),
     gstPercent: toNumber(record.gstPercent, 18),
     quotationNo: toString(record.quotationNo),
@@ -129,6 +131,54 @@ function sanitizeRecord(raw: unknown): JobRecord | null {
 
 export const STORAGE_KEY = "balaji_crm_state_v1";
 export const SETTINGS_STORAGE_KEY = "balaji_crm_settings_v1";
+export const LEGACY_SETTINGS_STORAGE_KEY = "legacySettings";
+
+const LEGACY_SETTING_VALUES = {
+  managementPanels: ["requestStatus", "serviceMix", "cashPosition", "operationsMatrix", "serviceValueMap"],
+  operationsColumns: ["requests", "share", "value"],
+  visibleStatuses: ALL_JOB_STATUSES,
+} as const;
+
+type LegacySettingKey = keyof typeof LEGACY_SETTING_VALUES;
+
+function validateLegacySettings(source: Record<string, unknown>) {
+  const settings: Partial<Record<LegacySettingKey, string[]>> = {};
+  for (const key of Object.keys(LEGACY_SETTING_VALUES) as LegacySettingKey[]) {
+    if (!Array.isArray(source[key])) continue;
+    const allowedValues: readonly string[] = LEGACY_SETTING_VALUES[key];
+    settings[key] = source[key].filter(
+      (value): value is string => typeof value === "string" && allowedValues.includes(value),
+    );
+  }
+  return settings;
+}
+
+function preserveLegacySettings(parsed: Record<string, unknown>) {
+  const legacySettings = validateLegacySettings(parsed);
+
+  if (!Object.keys(legacySettings).length) return;
+
+  let existingSettings: Partial<Record<LegacySettingKey, string[]>> = {};
+  try {
+    const existingRaw = window.localStorage.getItem(LEGACY_SETTINGS_STORAGE_KEY);
+    const existing: unknown = existingRaw ? JSON.parse(existingRaw) : undefined;
+    if (existing && typeof existing === "object" && !Array.isArray(existing)) {
+      existingSettings = validateLegacySettings(existing as Record<string, unknown>);
+    }
+  } catch (error) {
+    console.warn("Existing legacy settings could not be read and will be replaced.", error);
+  }
+
+  try {
+    window.localStorage.setItem(
+      LEGACY_SETTINGS_STORAGE_KEY,
+      JSON.stringify({ ...existingSettings, ...legacySettings }),
+    );
+    console.warn("Your old advanced settings were preserved under 'legacySettings'.");
+  } catch (error) {
+    console.error("Unable to preserve old advanced settings under 'legacySettings'.", error);
+  }
+}
 
 export async function syncRecordsToGoogleSheets(records: RecordsState): Promise<boolean> {
   if (process.env.NEXT_PUBLIC_ENABLE_SHEETS_SYNC !== "true") return false;
@@ -202,28 +252,19 @@ export function loadStoredSettings(): SettingsState | undefined {
   try {
     const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
     if (!raw) return undefined;
-    const parsed = JSON.parse(raw) as Partial<SettingsState>;
-    if (!parsed || typeof parsed.brandingName !== "string" || !Array.isArray(parsed.dashboardWidgets)) {
+    const value: unknown = JSON.parse(raw);
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
       return undefined;
     }
+    const parsed = value as Record<string, unknown>;
+    preserveLegacySettings(parsed);
+    if (typeof parsed.brandingName !== "string" || !Array.isArray(parsed.dashboardWidgets)) return undefined;
     const dashboardWidgets = parsed.dashboardWidgets.filter((widget) =>
       DEFAULT_SETTINGS.dashboardWidgets.includes(widget as (typeof DEFAULT_SETTINGS.dashboardWidgets)[number])
     ) as SettingsState["dashboardWidgets"];
-    const managementPanels = Array.isArray(parsed.managementPanels)
-      ? parsed.managementPanels.filter((panel) => MANAGEMENT_PANELS.includes(panel as (typeof MANAGEMENT_PANELS)[number])) as SettingsState["managementPanels"]
-      : [...DEFAULT_SETTINGS.managementPanels];
-    const operationsColumns = Array.isArray(parsed.operationsColumns)
-      ? parsed.operationsColumns.filter((column) => OPERATIONS_COLUMNS.includes(column as (typeof OPERATIONS_COLUMNS)[number])) as SettingsState["operationsColumns"]
-      : [...DEFAULT_SETTINGS.operationsColumns];
-    const visibleStatuses = Array.isArray(parsed.visibleStatuses)
-      ? parsed.visibleStatuses.filter((status) => ALL_JOB_STATUSES.includes(status as (typeof ALL_JOB_STATUSES)[number])) as SettingsState["visibleStatuses"]
-      : [...DEFAULT_SETTINGS.visibleStatuses];
     return {
       brandingName: parsed.brandingName.trim() || DEFAULT_SETTINGS.brandingName,
       dashboardWidgets: dashboardWidgets.length ? dashboardWidgets : [...DEFAULT_SETTINGS.dashboardWidgets],
-      managementPanels: managementPanels.length ? managementPanels : [...DEFAULT_SETTINGS.managementPanels],
-      operationsColumns: operationsColumns.length ? operationsColumns : [...DEFAULT_SETTINGS.operationsColumns],
-      visibleStatuses: visibleStatuses.length ? visibleStatuses : [...DEFAULT_SETTINGS.visibleStatuses],
     };
   } catch {
     return undefined;

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import {
@@ -14,6 +15,7 @@ import {
 import { RootState } from "@/lib/store";
 import { computeTotals, localDateInput } from "@/lib/money";
 import DocumentPreview from "@/components/DocumentPreview";
+import DocumentEditor from "@/components/DocumentEditor";
 import PaymentPanel from "@/components/PaymentPanel";
 import StatusBadge from "@/components/StatusBadge";
 import { Payment } from "@/lib/types";
@@ -21,6 +23,7 @@ import { Payment } from "@/lib/types";
 export default function InvoicePage({ params }: { params: { id: string } }) {
   const dispatch = useAppDispatch();
   const router = useRouter();
+  const [editing, setEditing] = useState(false);
   const record = useAppSelector((s: RootState) => selectRecordById(s, params.id));
 
   if (!record) {
@@ -109,17 +112,33 @@ export default function InvoicePage({ params }: { params: { id: string } }) {
           <button className="btn-outline" onClick={() => setTimeout(() => window.print(), 50)}>
             Print invoice
           </button>
+          <button type="button" className={editing ? "btn-outline" : "btn-primary"} onClick={() => setEditing((value) => !value)}>
+            {editing ? "Close editor" : "Edit invoice"}
+          </button>
           {record.status === "closed" ? (
             <button className="btn-outline" onClick={reopenJob}>
               Reopen job
             </button>
           ) : totals.balanceDue <= 0 ? (
             <button className="btn-primary" onClick={closeJob}>
-              Complete Work
+              Mark Work Done
             </button>
           ) : null}
         </div>
       </div>
+
+      {editing && (
+        <DocumentEditor
+          record={record}
+          documentType="invoice"
+          onCancel={() => setEditing(false)}
+          onSave={(patch) => {
+            dispatch(patchRecord({ id: record.id, patch }));
+            dispatch(setStatus({ id: record.id, status: "invoiced" }));
+            setEditing(false);
+          }}
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-5 items-start">
         <div className="no-print flex flex-col gap-4">

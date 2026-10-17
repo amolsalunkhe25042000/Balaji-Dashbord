@@ -33,6 +33,8 @@ export function makeBlankRecord(service: ServiceKey): JobRecord {
     customer: { name: "", address: "", contact: "", site: "" },
     items: svc.defaultItems.map((it) => ({ id: newId("item"), ...it })),
     discountPercent: 0,
+    discountMode: "percent",
+    discountValue: 0,
     gstEnabled: false,
     gstPercent: 18,
     quotationNo: "",

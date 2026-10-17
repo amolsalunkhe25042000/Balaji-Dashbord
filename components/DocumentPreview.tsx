@@ -198,7 +198,11 @@ export default function DocumentPreview({
             </tr>
             {totals.discountAmount > 0 && (
               <tr>
-                <td className="py-1.5 text-muted">Discount ({record.discountPercent}%)</td>
+                <td className="py-1.5 text-muted">
+                  Discount ({record.discountMode === "amount"
+                    ? `₹${fmtMoney(record.discountValue ?? 0)}`
+                    : `${record.discountValue ?? record.discountPercent}%`})
+                </td>
                 <td className="py-1.5 text-right font-semibold font-mono">− ₹ {fmtMoney(totals.discountAmount)}</td>
               </tr>
             )}
@@ -300,7 +304,7 @@ export default function DocumentPreview({
         <div className="text-xs text-muted text-center">
           {isInvoice && record.showInvoiceSignature ? (
             <div className="invoice-signature" aria-label={`Authorized signature for ${record.company.name}`}>
-              <div className="invoice-signature-ink">{record.company.name}</div>
+              <div className="invoice-signature-ink">Balaji WPS</div>
               <div className="invoice-signature-rule" />
               <div className="invoice-signature-label">Authorized signatory</div>
             </div>

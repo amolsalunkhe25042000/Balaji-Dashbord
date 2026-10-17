@@ -5,21 +5,21 @@ import { computeTotals, fmtMoney, formatDate } from "@/lib/money";
 import StatusBadge from "./StatusBadge";
 
 export default function EnquiryRegister({ records }: { records: JobRecord[] }) {
-  const enquiries = [...records].sort(
+  const enquiries = records.filter((record) => ["enquiry", "quotation_sent", "request_closed"].includes(record.status)).sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   );
 
   return (
-    <section className="panel" aria-label="Customer visits and approval queue">
+    <section className="panel" aria-label="Enquiries">
       <div className="panel-head flex-wrap gap-2">
         <div>
-          <h2>Customer visits &amp; approval queue</h2>
+          <h2>Enquiry and approval queue</h2>
           <p className="mt-1 text-xs font-normal normal-case tracking-normal text-muted">
-            New visits, quotations waiting for approval, and rejected requests stay out of the approved work pipeline.
+            New enquiries, quotations waiting for approval, and rejected requests stay out of the jobs list.
           </p>
         </div>
         <span className="rounded-full bg-water/10 px-2.5 py-1 text-xs font-bold text-water">
-          {enquiries.length} enquiries
+          {enquiries.length} requests
         </span>
       </div>
 
@@ -39,7 +39,7 @@ export default function EnquiryRegister({ records }: { records: JobRecord[] }) {
             {enquiries.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted">
-                  No customer enquiries saved yet.
+                  No enquiries or quotations need attention right now.
                 </td>
               </tr>
             )}

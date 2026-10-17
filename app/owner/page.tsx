@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { addBusinessExpense, addExpense, removeBusinessExpense, removeExpense, selectAllRecords, updateBusinessExpense, updateExpense } from "@/lib/recordsSlice";
-import { fmtMoney, formatDate, localDateInput, newId } from "@/lib/money";
+import { computeTotals, fmtMoney, formatDate, localDateInput, newId } from "@/lib/money";
 import { SERVICES } from "@/lib/services";
 import { BusinessExpense, Expense, ExpenseCategory } from "@/lib/types";
 import { BUSINESS_EXPENSE_CATEGORIES, JOB_EXPENSE_CATEGORIES, JOB_EXPENSE_COLORS, JOB_EXPENSE_LABELS } from "@/lib/expenseCategories";

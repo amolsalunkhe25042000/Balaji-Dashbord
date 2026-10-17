@@ -97,7 +97,7 @@ export default function CustomerTable({ records }: { records: JobRecord[] }) {
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Jobs");
-    XLSX.writeFile(workbook, `balaji-approved-jobs-${filtered.length}-records.xlsx`);
+    XLSX.writeFile(workbook, `balaji-jobs-${filtered.length}-records.xlsx`);
   };
 
   return (

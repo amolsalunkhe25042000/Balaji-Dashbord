@@ -1,6 +1,7 @@
 "use client";
 
 import { JobRecord, JobStatus, ServiceKey } from "@/lib/types";
+import { SERVICES } from "@/lib/services";
 
 type FilterStatus = "all" | JobStatus;
 type FilterService = "all" | ServiceKey;
@@ -33,7 +34,7 @@ export default function ManagementDashboard({
 }) {
   const activeFilterLabel = activeStatus === "all" && activeService === "all"
     ? "All jobs"
-    : `${activeService === "all" ? "All services" : activeService === "painting" ? "Painting" : "Waterproofing"} · ${activeStatus === "all" ? "All statuses" : activeStatus.replaceAll("_", " ")}`;
+    : `${activeService === "all" ? "All services" : SERVICES[activeService].label} · ${activeStatus === "all" ? "All statuses" : activeStatus.replaceAll("_", " ")}`;
 
   return (
     <section className="panel p-4" aria-label="Job pipeline">

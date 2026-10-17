@@ -9,7 +9,9 @@ import { isInvoiceRecord } from "@/lib/money";
 
 const READ_KEY = "balaji_crm_read_notifications_v1";
 
-function Icon({ name }: { name: "home" | "plus" | "visits" | "check" | "chart" | "bell" | "settings" | "help" | "menu" | "close" }) {
+type IconName = "home" | "plus" | "visits" | "check" | "chart" | "bell" | "settings" | "help" | "menu" | "close";
+
+function Icon({ name }: { name: IconName }) {
   const paths = {
     home: <><path d="m3 10 9-7 9 7" /><path d="M5 9v11h14V9" /><path d="M9 20v-6h6v6" /></>,
     plus: <><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M12 8v6M9 11h6" /></>,
@@ -22,7 +24,18 @@ function Icon({ name }: { name: "home" | "plus" | "visits" | "check" | "chart" |
     menu: <><path d="M4 7h16M4 12h16M4 17h16" /></>,
     close: <><path d="m6 6 12 12M18 6 6 18" /></>,
   };
-  return <svg className="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
+
+  return <svg className="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
+}
+
+function WatermarkLogo() {
+  return (
+    <svg viewBox="0 0 48 48" className="h-10 w-10 shrink-0" fill="none" aria-hidden="true">
+      <path d="M24 4C19 12 10 21 10 29a14 14 0 0 0 28 0C38 21 29 12 24 4Z" fill="#0F8B8D" />
+      <path d="M17 29c0 4 3 7 7 7" stroke="#D8F0ED" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="m17 20 7-5 7 5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
 }
 
 function notificationIds(records: ReturnType<typeof selectAllRecords>) {
@@ -79,38 +92,63 @@ export default function TopNav() {
   }
 
   const navLinks = [
-    ["/", "Dashboard", "home"], ["/new", "New Job", "plus"], ["/visits", "Enquiries", "visits"], ["/approved", "Jobs", "check"], ["/owner", "Finance", "chart"],
+    ["/", "Dashboard", "home"],
+    ["/new", "New Job", "plus"],
+    ["/visits", "Enquiries", "visits"],
+    ["/approved", "Jobs", "check"],
+    ["/owner", "Finance", "chart"],
+    ["/notifications", "Notifications", "bell"],
+    ["/settings", "Settings", "settings"],
+    ["/help", "Help", "help"],
   ] as const;
 
   return (
-    <header className="no-print app-header text-white">
-      <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 flex items-center justify-between gap-4">
-        <Link href="/" className="brand-lockup rounded-md transition hover:text-[#9FD3D2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9FD3D2] focus-visible:ring-offset-2 focus-visible:ring-offset-deep active:scale-[0.99]">
-          <div className="brand-title">{brandingName}</div>
-          <div className="brand-subtitle">Enquiries · Quotations · Invoices · Payments</div>
+    <aside className="no-print app-sidebar">
+      <div className="sidebar-top">
+        <Link href="/" className="sidebar-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9FD3D2]">
+          <WatermarkLogo />
+          <span className="min-w-0">
+            <span className="sidebar-brand-title">Balaji WPS</span>
+            <span className="sidebar-brand-subtitle">Amol Salunkhe</span>
+          </span>
         </Link>
-        <nav className="header-nav" aria-label="Primary navigation">
-          <div className="header-desktop-links">
-            {navLinks.map(([href, label, icon]) => <Link key={href} href={href} aria-current={isActive(href) ? "page" : undefined} className={`header-nav-link gap-2 px-2 text-xs font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:bg-white/10 active:translate-y-0 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9FD3D2] ${isActive(href) ? "header-nav-link-active bg-white/10 text-white" : ""}`}><Icon name={icon} /><span>{label}</span></Link>)}
-          </div>
-          <span className="header-divider" aria-hidden="true" />
-          <Link href="/notifications" onClick={openNotifications} aria-current={isActive("/notifications") ? "page" : undefined} className={`header-utility relative gap-2 px-2 text-xs font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:bg-white/10 active:translate-y-0 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9FD3D2] ${isActive("/notifications") ? "header-nav-link-active bg-white/10 text-white" : ""}`} aria-label={`Notifications${notificationCount ? `, ${notificationCount} pending` : ""}`}>
-            <Icon name="bell" /><span>Notifications</span>
-            {notificationCount > 0 && <span className="absolute right-0.5 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#D96272] px-1 text-[9px] font-bold leading-none text-white">{notificationCount > 9 ? "9+" : notificationCount}</span>}
-          </Link>
-          <Link href="/settings" aria-current={isActive("/settings") ? "page" : undefined} className={`header-utility gap-2 px-2 text-xs font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:bg-white/10 active:translate-y-0 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9FD3D2] ${isActive("/settings") ? "header-nav-link-active bg-white/10 text-white" : ""}`}>
-            <Icon name="settings" /><span>Settings</span>
-          </Link>
-          <Link href="/help" aria-current={isActive("/help") ? "page" : undefined} className={`header-utility gap-2 px-2 text-xs font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:bg-white/10 active:translate-y-0 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9FD3D2] ${isActive("/help") ? "header-nav-link-active bg-white/10 text-white" : ""}`}>
-            <Icon name="help" /><span>Help</span>
-          </Link>
-          <button type="button" className="header-menu-button transition hover:bg-white/15 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9FD3D2]" aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}><Icon name={menuOpen ? "close" : "menu"} /><span className="ml-2 text-xs font-semibold">{menuOpen ? "Close" : "Menu"}</span></button>
-        </nav>
+        <button
+          type="button"
+          className="sidebar-menu-toggle"
+          aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-expanded={menuOpen}
+          aria-controls="primary-navigation"
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          <Icon name={menuOpen ? "close" : "menu"} />
+        </button>
       </div>
-      {menuOpen && <div className="header-mobile-menu">
-        <div className="header-mobile-links">{navLinks.map(([href, label, icon]) => <Link key={href} href={href} aria-current={isActive(href) ? "page" : undefined} className={`header-mobile-link transition-all duration-150 hover:translate-x-1 hover:bg-white/10 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9FD3D2] ${isActive(href) ? "header-mobile-link-active" : ""}`}><Icon name={icon} /><span>{label}</span></Link>)}</div>
-        <div className="header-mobile-links"><Link href="/notifications" onClick={openNotifications} aria-current={isActive("/notifications") ? "page" : undefined} className={`header-mobile-link transition-all duration-150 hover:translate-x-1 hover:bg-white/10 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9FD3D2] ${isActive("/notifications") ? "header-mobile-link-active" : ""}`}><Icon name="bell" /><span>Notifications{notificationCount ? ` (${notificationCount})` : ""}</span></Link><Link href="/settings" aria-current={isActive("/settings") ? "page" : undefined} className={`header-mobile-link transition-all duration-150 hover:translate-x-1 hover:bg-white/10 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9FD3D2] ${isActive("/settings") ? "header-mobile-link-active" : ""}`}><Icon name="settings" /><span>Settings</span></Link><Link href="/help" aria-current={isActive("/help") ? "page" : undefined} className={`header-mobile-link transition-all duration-150 hover:translate-x-1 hover:bg-white/10 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9FD3D2] ${isActive("/help") ? "header-mobile-link-active" : ""}`}><Icon name="help" /><span>Help centre</span></Link></div>
-      </div>}
-    </header>
+      <nav id="primary-navigation" className={`sidebar-nav${menuOpen ? " sidebar-nav-open" : ""}`} aria-label="Primary navigation">
+        {navLinks.map(([href, label, icon]) => {
+          const active = isActive(href);
+          const isNotifications = href === "/notifications";
+          return (
+            <Link
+              key={href}
+              href={href}
+              onClick={isNotifications ? openNotifications : undefined}
+              aria-current={active ? "page" : undefined}
+              aria-label={isNotifications && notificationCount ? `Notifications, ${notificationCount} pending` : undefined}
+              className={`sidebar-link${active ? " sidebar-link-active" : ""}`}
+            >
+              <Icon name={icon} />
+              <span>{label}</span>
+              {isNotifications && notificationCount > 0 && (
+                <span className="sidebar-notification-count">{notificationCount > 9 ? "9+" : notificationCount}</span>
+              )}
+            </Link>
+          );
+        })}
+      </nav>
+      <div className="sidebar-footer">
+        <span className="sidebar-footer-dot" aria-hidden="true" />
+        <span>Waterproofing &amp; Painting</span>
+      </div>
+    </aside>
   );
 }

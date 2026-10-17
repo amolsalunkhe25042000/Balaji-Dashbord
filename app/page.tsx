@@ -39,7 +39,7 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-display font-bold text-deep">{brandingName} Dashboard</h1>
+          <h1 className="text-xl font-display font-bold text-deep">Balaji Painting & Waterproofing Service Dashboard</h1>
           <p className="text-sm text-muted">Overview of every enquiry, quotation and invoice.</p>
         </div>
       </div>

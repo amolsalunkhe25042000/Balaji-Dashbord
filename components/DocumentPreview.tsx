@@ -304,7 +304,7 @@ export default function DocumentPreview({
         <div className="text-xs text-muted text-center">
           {isInvoice && record.showInvoiceSignature ? (
             <div className="invoice-signature" aria-label={`Authorized signature for ${record.company.name}`}>
-              <div className="invoice-signature-ink">{record.company.name}</div>
+              <div className="invoice-signature-ink">Balaji WPS</div>
               <div className="invoice-signature-rule" />
               <div className="invoice-signature-label">Authorized signatory</div>
             </div>
